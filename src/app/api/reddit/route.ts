@@ -10,11 +10,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const redditUrl = `https://www.reddit.com${path}`;
+    // Use old.reddit.com which is more lenient with User-Agents
+    const redditUrl = `https://old.reddit.com${path}`;
 
     const response = await fetch(redditUrl, {
       headers: {
-        'User-Agent': 'Pressbox/1.0 (personal game threads viewer)',
+        // Reddit requires a descriptive User-Agent
+        'User-Agent': 'web:pressbox:v1.0.0 (personal game threads viewer)',
+        'Accept': 'application/json',
       },
     });
 
