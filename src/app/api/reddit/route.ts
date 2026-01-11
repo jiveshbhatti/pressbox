@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Use Edge Runtime - runs on Cloudflare's network with different IPs
+export const runtime = 'edge';
+
 // Proxy requests to Reddit's public JSON API to avoid CORS issues
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
