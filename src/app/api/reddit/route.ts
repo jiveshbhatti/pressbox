@@ -9,37 +9,50 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing path parameter' }, { status: 400 });
   }
 
-  try {
-    // Use old.reddit.com which is more lenient with User-Agents
-    const redditUrl = `https://old.reddit.com${path}`;
+  // Try multiple Reddit endpoints - some may work better than others
+  const endpoints = [
+    `https://www.reddit.com${path}`,
+    `https://old.reddit.com${path}`,
+    `https://api.reddit.com${path}`,
+  ];
 
-    const response = await fetch(redditUrl, {
-      headers: {
-        // Reddit requires a descriptive User-Agent
-        'User-Agent': 'web:pressbox:v1.0.0 (personal game threads viewer)',
-        'Accept': 'application/json',
-      },
-    });
+  // Browser-like headers to avoid bot detection
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+  };
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: `Reddit API error: ${response.status}` },
-        { status: response.status }
-      );
+  let lastError = '';
+
+  for (const redditUrl of endpoints) {
+    try {
+      const response = await fetch(redditUrl, {
+        headers,
+        cache: 'no-store',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return NextResponse.json(data, {
+          headers: {
+            'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
+          },
+        });
+      }
+
+      lastError = `${response.status} from ${new URL(redditUrl).hostname}`;
+    } catch (error) {
+      lastError = `Error from ${new URL(redditUrl).hostname}: ${error}`;
     }
-
-    const data = await response.json();
-
-    return NextResponse.json(data, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
-      },
-    });
-  } catch (error) {
-    console.error('Reddit proxy error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch from Reddit' },
-      { status: 500 }
-    );
   }
+
+  console.error('Reddit proxy error:', lastError);
+  return NextResponse.json(
+    { error: `Failed to fetch from Reddit: ${lastError}` },
+    { status: 502 }
+  );
 }
