@@ -1,65 +1,209 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect, useCallback } from 'react';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { Header } from '@/components/Header';
+import { GameCard } from '@/components/GameCard';
+import { ThreadList } from '@/components/ThreadList';
+import { Comments } from '@/components/Comments';
+import { Game, GameThread, Sport } from '@/types';
+import { getAllGames } from '@/lib/sports';
+import { findGameThreads } from '@/lib/threads';
+import { findGameThreadsPublic } from '@/lib/reddit-public';
+
+function HomePage() {
+  const { accessToken, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [games, setGames] = useState<Game[]>([]);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [threads, setThreads] = useState<GameThread[]>([]);
+  const [selectedThread, setSelectedThread] = useState<GameThread | null>(null);
+  const [isLoadingGames, setIsLoadingGames] = useState(true);
+  const [isLoadingThreads, setIsLoadingThreads] = useState(false);
+  const [sportFilter, setSportFilter] = useState<Sport | 'all'>('all');
+
+  // Fetch games on mount and every 5 minutes
+  const fetchGames = useCallback(async () => {
+    try {
+      const allGames = await getAllGames();
+      setGames(allGames);
+    } catch (error) {
+      console.error('Error fetching games:', error);
+    } finally {
+      setIsLoadingGames(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGames();
+    const interval = setInterval(fetchGames, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchGames]);
+
+  // Fetch threads when a game is selected
+  const handleSelectGame = useCallback(async (game: Game) => {
+    setSelectedGame(game);
+    setSelectedThread(null);
+    setThreads([]);
+    setIsLoadingThreads(true);
+
+    try {
+      // Use authenticated API if available, otherwise use public JSON
+      const gameThreads = accessToken
+        ? await findGameThreads(accessToken, game)
+        : await findGameThreadsPublic(game);
+      setThreads(gameThreads);
+    } catch (error) {
+      console.error('Error fetching threads:', error);
+    } finally {
+      setIsLoadingThreads(false);
+    }
+  }, [accessToken]);
+
+  const handleBack = () => {
+    if (selectedThread) {
+      setSelectedThread(null);
+    } else if (selectedGame) {
+      setSelectedGame(null);
+      setThreads([]);
+    }
+  };
+
+  const filteredGames = sportFilter === 'all'
+    ? games
+    : games.filter(g => g.sport === sportFilter);
+
+  // Show comments view
+  if (selectedThread) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex flex-col">
+          <Comments thread={selectedThread} onBack={handleBack} />
+        </main>
+      </div>
+    );
+  }
+
+  // Show thread list for selected game
+  if (selectedGame) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-4">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors"
+          >
+            <span>←</span>
+            <span>Back to games</span>
+          </button>
+
+          <div className="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${
+                selectedGame.sport === 'nfl'
+                  ? 'bg-green-900/50 text-green-400'
+                  : 'bg-orange-900/50 text-orange-400'
+              }`}>
+                {selectedGame.sport}
+              </span>
+              {selectedGame.status === 'in_progress' && (
+                <span className="flex items-center gap-1.5 text-xs font-medium text-red-400">
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  LIVE
+                </span>
+              )}
+            </div>
+            <h2 className="text-lg font-bold">
+              {selectedGame.awayTeam.name} @ {selectedGame.homeTeam.name}
+            </h2>
+            {(selectedGame.status === 'in_progress' || selectedGame.status === 'final') && (
+              <p className="text-2xl font-bold mt-1">
+                {selectedGame.awayScore} - {selectedGame.homeScore}
+              </p>
+            )}
+          </div>
+
+          {!isAuthenticated && (
+            <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-3 mb-4 text-sm">
+              <p className="text-blue-300">📖 Read-only mode • Sign in with Reddit to comment & vote</p>
+            </div>
+          )}
+
+          <ThreadList
+            threads={threads}
+            selectedThreadId={null}
+            onSelectThread={setSelectedThread}
+            isLoading={isLoadingThreads}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // Show game list (home)
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-4">
+        {/* Sport filter */}
+        <div className="flex items-center gap-2 mb-4">
+          {(['all', 'nfl', 'nba'] as const).map(sport => (
+            <button
+              key={sport}
+              onClick={() => setSportFilter(sport)}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                sportFilter === sport
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-slate-800 text-gray-400 hover:text-white'
+              }`}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              {sport === 'all' ? 'All Games' : sport.toUpperCase()}
+            </button>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        {/* Loading state */}
+        {isLoadingGames || authLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-slate-800 rounded-xl p-4 animate-pulse">
+                <div className="h-4 bg-slate-700 rounded w-16 mb-4" />
+                <div className="h-5 bg-slate-700 rounded w-48 mb-2" />
+                <div className="h-5 bg-slate-700 rounded w-40" />
+              </div>
+            ))}
+          </div>
+        ) : filteredGames.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-400 text-lg">No games scheduled today</p>
+            <p className="text-gray-500 text-sm mt-2">Check back later!</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {filteredGames.map(game => (
+              <GameCard
+                key={game.id}
+                game={game}
+                onClick={() => handleSelectGame(game)}
+              />
+            ))}
+          </div>
+        )}
       </main>
+
+      {/* PWA install hint for iOS */}
+      <footer className="text-center py-4 text-xs text-gray-600">
+        <p>Tap Share → Add to Home Screen for the app experience</p>
+      </footer>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <AuthProvider>
+      <HomePage />
+    </AuthProvider>
   );
 }
