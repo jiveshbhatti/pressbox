@@ -1,4 +1,4 @@
-import { Game, Sport } from '@/types';
+import { Game, Sport, GameSituation } from '@/types';
 
 // ESPN API endpoints (free, no key required)
 const ESPN_NFL_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
@@ -13,6 +13,22 @@ interface ESPNCompetitor {
   };
   score?: string;
   homeAway: 'home' | 'away';
+  records?: Array<{
+    type: string;
+    summary: string;
+  }>;
+}
+
+interface ESPNSituation {
+  possession?: string;
+  downDistanceText?: string;
+  shortDownDistanceText?: string;
+  isRedZone?: boolean;
+  homeTimeouts?: number;
+  awayTimeouts?: number;
+  lastPlay?: {
+    text?: string;
+  };
 }
 
 interface ESPNEvent {
@@ -22,13 +38,18 @@ interface ESPNEvent {
     type: {
       name: string;
       state: 'pre' | 'in' | 'post';
+      detail?: string;
+      shortDetail?: string;
     };
+    period?: number;
+    displayClock?: string;
   };
   competitions: Array<{
     competitors: ESPNCompetitor[];
     venue?: {
       fullName: string;
     };
+    situation?: ESPNSituation;
   }>;
 }
 
@@ -38,10 +59,10 @@ interface ESPNScoreboard {
 
 function parseESPNGame(event: ESPNEvent, sport: Sport): Game {
   const competition = event.competitions[0];
-  const homeTeam = competition.competitors.find(c => c.homeAway === 'home');
-  const awayTeam = competition.competitors.find(c => c.homeAway === 'away');
+  const homeCompetitor = competition.competitors.find(c => c.homeAway === 'home');
+  const awayCompetitor = competition.competitors.find(c => c.homeAway === 'away');
 
-  if (!homeTeam || !awayTeam) {
+  if (!homeCompetitor || !awayCompetitor) {
     throw new Error('Invalid game data');
   }
 
@@ -52,26 +73,50 @@ function parseESPNGame(event: ESPNEvent, sport: Sport): Game {
     status = 'final';
   }
 
+  // Get team records
+  const homeRecord = homeCompetitor.records?.find(r => r.type === 'total')?.summary;
+  const awayRecord = awayCompetitor.records?.find(r => r.type === 'total')?.summary;
+
+  // Parse situation for live games
+  let situation: GameSituation | undefined;
+  if (competition.situation) {
+    const sit = competition.situation;
+    situation = {
+      possession: sit.possession,
+      downDistanceText: sit.shortDownDistanceText || sit.downDistanceText,
+      lastPlay: sit.lastPlay?.text,
+      isRedZone: sit.isRedZone,
+      homeTimeouts: sit.homeTimeouts,
+      awayTimeouts: sit.awayTimeouts,
+    };
+  }
+
   return {
     id: event.id,
     sport,
     homeTeam: {
-      id: homeTeam.team.id,
-      name: homeTeam.team.name,
-      abbreviation: homeTeam.team.abbreviation,
-      logo: homeTeam.team.logo,
+      id: homeCompetitor.team.id,
+      name: homeCompetitor.team.name,
+      abbreviation: homeCompetitor.team.abbreviation,
+      logo: homeCompetitor.team.logo,
+      record: homeRecord,
     },
     awayTeam: {
-      id: awayTeam.team.id,
-      name: awayTeam.team.name,
-      abbreviation: awayTeam.team.abbreviation,
-      logo: awayTeam.team.logo,
+      id: awayCompetitor.team.id,
+      name: awayCompetitor.team.name,
+      abbreviation: awayCompetitor.team.abbreviation,
+      logo: awayCompetitor.team.logo,
+      record: awayRecord,
     },
-    homeScore: homeTeam.score ? parseInt(homeTeam.score, 10) : undefined,
-    awayScore: awayTeam.score ? parseInt(awayTeam.score, 10) : undefined,
+    homeScore: homeCompetitor.score ? parseInt(homeCompetitor.score, 10) : undefined,
+    awayScore: awayCompetitor.score ? parseInt(awayCompetitor.score, 10) : undefined,
     status,
     startTime: event.date,
     venue: competition.venue?.fullName,
+    period: event.status.period,
+    clock: event.status.displayClock,
+    statusDetail: event.status.type.shortDetail || event.status.type.detail,
+    situation,
   };
 }
 

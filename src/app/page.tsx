@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Header } from '@/components/Header';
 import { GameCard } from '@/components/GameCard';
@@ -8,6 +9,22 @@ import { ThreadList } from '@/components/ThreadList';
 import { Game, GameThread, Sport } from '@/types';
 import { getAllGames } from '@/lib/sports';
 import { findGameThreadsPublic } from '@/lib/reddit-public';
+
+function TeamLogo({ src, alt, size = 48 }: { src?: string; alt: string; size?: number }) {
+  if (!src) {
+    return (
+      <div
+        className="bg-slate-700 rounded-full flex items-center justify-center text-gray-400 text-sm font-bold"
+        style={{ width: size, height: size }}
+      >
+        {alt.substring(0, 3)}
+      </div>
+    );
+  }
+  return (
+    <Image src={src} alt={alt} width={size} height={size} className="object-contain" unoptimized />
+  );
+}
 
 function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
@@ -17,23 +34,30 @@ function HomePage() {
   const [isLoadingThreads, setIsLoadingThreads] = useState(false);
   const [sportFilter, setSportFilter] = useState<Sport | 'all'>('all');
 
-  // Fetch games on mount and every 5 minutes
+  // Fetch games on mount and refresh frequently for live scores
   const fetchGames = useCallback(async () => {
     try {
       const allGames = await getAllGames();
       setGames(allGames);
+      // Also update selected game with fresh data
+      if (selectedGame) {
+        const updated = allGames.find(g => g.id === selectedGame.id);
+        if (updated) setSelectedGame(updated);
+      }
     } catch (error) {
       console.error('Error fetching games:', error);
     } finally {
       setIsLoadingGames(false);
     }
-  }, []);
+  }, [selectedGame]);
 
   useEffect(() => {
     fetchGames();
-    const interval = setInterval(fetchGames, 5 * 60 * 1000);
+    // Refresh every 30 seconds for live scores, 5 minutes otherwise
+    const hasLiveGame = games.some(g => g.status === 'in_progress');
+    const interval = setInterval(fetchGames, hasLiveGame ? 30 * 1000 : 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [fetchGames]);
+  }, [fetchGames, games]);
 
   // Fetch threads when a game is selected
   const handleSelectGame = useCallback(async (game: Game) => {
@@ -63,6 +87,9 @@ function HomePage() {
 
   // Show thread list for selected game
   if (selectedGame) {
+    const isLive = selectedGame.status === 'in_progress';
+    const isFinal = selectedGame.status === 'final';
+
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
@@ -75,8 +102,10 @@ function HomePage() {
             <span>Back to games</span>
           </button>
 
+          {/* Enhanced Scoreboard */}
           <div className="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
-            <div className="flex items-center justify-between mb-2">
+            {/* Status bar */}
+            <div className="flex items-center justify-between mb-4">
               <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${
                 selectedGame.sport === 'nfl'
                   ? 'bg-green-900/50 text-green-400'
@@ -84,20 +113,78 @@ function HomePage() {
               }`}>
                 {selectedGame.sport}
               </span>
-              {selectedGame.status === 'in_progress' && (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-red-400">
-                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  LIVE
-                </span>
-              )}
+              {isLive ? (
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-red-400">
+                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    LIVE
+                  </span>
+                  {selectedGame.statusDetail && (
+                    <span className="text-xs text-gray-400">{selectedGame.statusDetail}</span>
+                  )}
+                </div>
+              ) : isFinal ? (
+                <span className="text-xs font-medium text-gray-400">FINAL</span>
+              ) : null}
             </div>
-            <h2 className="text-lg font-bold">
-              {selectedGame.awayTeam.name} @ {selectedGame.homeTeam.name}
-            </h2>
-            {(selectedGame.status === 'in_progress' || selectedGame.status === 'final') && (
-              <p className="text-2xl font-bold mt-1">
-                {selectedGame.awayScore} - {selectedGame.homeScore}
-              </p>
+
+            {/* Teams and Score */}
+            <div className="flex items-center justify-between gap-4">
+              {/* Away Team */}
+              <div className="flex-1 flex flex-col items-center text-center">
+                <TeamLogo src={selectedGame.awayTeam.logo} alt={selectedGame.awayTeam.abbreviation} size={56} />
+                <div className="mt-2 font-semibold text-sm">{selectedGame.awayTeam.name}</div>
+                {selectedGame.awayTeam.record && (
+                  <div className="text-xs text-gray-500">{selectedGame.awayTeam.record}</div>
+                )}
+              </div>
+
+              {/* Score */}
+              <div className="flex flex-col items-center">
+                {(isLive || isFinal) ? (
+                  <div className="flex items-center gap-3">
+                    <span className={`text-4xl font-bold tabular-nums ${
+                      selectedGame.awayScore! > selectedGame.homeScore! ? 'text-white' : 'text-gray-500'
+                    }`}>
+                      {selectedGame.awayScore}
+                    </span>
+                    <span className="text-2xl text-gray-600">-</span>
+                    <span className={`text-4xl font-bold tabular-nums ${
+                      selectedGame.homeScore! > selectedGame.awayScore! ? 'text-white' : 'text-gray-500'
+                    }`}>
+                      {selectedGame.homeScore}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-lg font-medium text-gray-400">@</div>
+                )}
+              </div>
+
+              {/* Home Team */}
+              <div className="flex-1 flex flex-col items-center text-center">
+                <TeamLogo src={selectedGame.homeTeam.logo} alt={selectedGame.homeTeam.abbreviation} size={56} />
+                <div className="mt-2 font-semibold text-sm">{selectedGame.homeTeam.name}</div>
+                {selectedGame.homeTeam.record && (
+                  <div className="text-xs text-gray-500">{selectedGame.homeTeam.record}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Game Situation (NFL) */}
+            {isLive && selectedGame.situation?.downDistanceText && (
+              <div className={`mt-4 pt-3 border-t border-slate-700 text-center ${
+                selectedGame.situation.isRedZone ? 'text-red-400' : 'text-yellow-400'
+              }`}>
+                <p className="text-sm font-medium">
+                  🏈 {selectedGame.situation.downDistanceText}
+                  {selectedGame.situation.isRedZone && ' 🔴 Red Zone'}
+                </p>
+                {selectedGame.situation.lastPlay && (
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    {selectedGame.situation.lastPlay}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 

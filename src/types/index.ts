@@ -69,6 +69,16 @@ export interface Team {
   name: string;
   abbreviation: string;
   logo?: string;
+  record?: string; // e.g., "14-3"
+}
+
+export interface GameSituation {
+  possession?: string; // team abbreviation with possession
+  downDistanceText?: string; // e.g., "3rd & 2 at NE 3"
+  lastPlay?: string; // description of last play
+  isRedZone?: boolean;
+  homeTimeouts?: number;
+  awayTimeouts?: number;
 }
 
 export interface Game {
@@ -81,6 +91,11 @@ export interface Game {
   status: 'scheduled' | 'in_progress' | 'final';
   startTime: string;
   venue?: string;
+  // Live game details
+  period?: number; // quarter/half
+  clock?: string; // e.g., "8:18"
+  statusDetail?: string; // e.g., "8:18 - 2nd Quarter" or "Final"
+  situation?: GameSituation;
 }
 
 export interface GameThread {
