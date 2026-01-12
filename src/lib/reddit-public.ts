@@ -112,6 +112,35 @@ function matchesGame(post: ArcticPost, game: Game): boolean {
   return hasHome && hasAway;
 }
 
+// Normalize title for deduplication (remove scores, records, punctuation)
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\(\d+-\d+\)/g, '') // Remove records like (24-16)
+    .replace(/\d+-\d+/g, '') // Remove scores like 116-115
+    .replace(/[^\w\s]/g, '') // Remove punctuation
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Check if two titles are similar (for dedup)
+function isSimilarTitle(title1: string, title2: string): boolean {
+  const norm1 = normalizeTitle(title1);
+  const norm2 = normalizeTitle(title2);
+
+  // If normalized titles are identical or one contains the other
+  if (norm1 === norm2) return true;
+  if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
+
+  // Check word overlap - if 70%+ words match, consider similar
+  const words1 = new Set(norm1.split(' ').filter(w => w.length > 2));
+  const words2 = new Set(norm2.split(' ').filter(w => w.length > 2));
+  const intersection = [...words1].filter(w => words2.has(w)).length;
+  const similarity = intersection / Math.min(words1.size, words2.size);
+
+  return similarity > 0.7;
+}
+
 // Find game threads for a specific game using Arctic Shift
 export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
   // Check cache first
@@ -177,8 +206,21 @@ export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
     return b.post.num_comments - a.post.num_comments;
   });
 
-  // Cache the results
-  threadCache.set(cacheKey, { threads: sortedThreads, timestamp: Date.now() });
+  // Deduplicate similar titles ONLY within the same subreddit
+  // We want to keep threads from different subreddits even if titles are similar
+  const deduped: GameThread[] = [];
+  for (const thread of sortedThreads) {
+    const isDupe = deduped.some(existing =>
+      existing.subreddit === thread.subreddit && // Only dedupe within same subreddit
+      isSimilarTitle(existing.post.title, thread.post.title)
+    );
+    if (!isDupe) {
+      deduped.push(thread);
+    }
+  }
 
-  return sortedThreads;
+  // Cache the results
+  threadCache.set(cacheKey, { threads: deduped, timestamp: Date.now() });
+
+  return deduped;
 }

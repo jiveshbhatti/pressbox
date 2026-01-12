@@ -26,6 +26,8 @@ interface ESPNSituation {
   downDistanceText?: string;
   shortDownDistanceText?: string;
   isRedZone?: boolean;
+  yardLine?: number;
+  down?: number;
   homeTimeouts?: number;
   awayTimeouts?: number;
   lastPlay?: {
@@ -88,6 +90,8 @@ function parseESPNGame(event: ESPNEvent, sport: Sport): Game {
       downDistanceText: sit.shortDownDistanceText || sit.downDistanceText,
       lastPlay: sit.lastPlay?.text,
       isRedZone: sit.isRedZone,
+      yardLine: sit.yardLine,
+      down: sit.down,
       homeTimeouts: sit.homeTimeouts,
       awayTimeouts: sit.awayTimeouts,
     };
@@ -117,14 +121,15 @@ function parseESPNGame(event: ESPNEvent, sport: Sport): Game {
   const espnLeaders = (competition as any).leaders;
   if (espnLeaders && Array.isArray(espnLeaders)) {
     espnLeaders.forEach((l: any) => {
-      const teamId = l.team?.id;
+      // Structure: category.leaders[0].athlete/team
       const leader = l.leaders?.[0];
-      if (teamId && leader) {
+      if (leader) {
         leaders.push({
-          teamId,
+          teamId: leader.team?.id || leader.athlete?.team?.id || '',
           player: leader.athlete?.displayName || 'Unknown',
           stat: leader.displayValue || '',
           position: leader.athlete?.position?.abbreviation,
+          headshot: leader.athlete?.headshot,
         });
       }
     });
@@ -187,6 +192,40 @@ export async function getNBAGames(): Promise<Game[]> {
   } catch (error) {
     console.error('Error fetching NBA games:', error);
     return [];
+  }
+}
+
+export async function getGameDetails(id: string, sport: Sport): Promise<Game | null> {
+  try {
+    const baseUrl = sport === 'nfl'
+      ? 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary'
+      : 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary';
+
+    const response = await fetch(`${baseUrl}?event=${id}`);
+    if (!response.ok) throw new Error(`Failed to fetch ${sport} game details`);
+
+    const data = await response.json();
+    if (!data.header?.event) return null;
+
+    // Use existing parser if possible, or adapt
+    // The summary API has a different top-level but same event structure in header
+    const event = {
+      id: data.header.event.id,
+      date: data.header.event.date,
+      status: data.header.event.status,
+      competitions: [{
+        competitors: data.header.competitions[0].competitors,
+        venue: data.gameInfo?.venue,
+        situation: data.drives?.current?.description ? { lastPlay: { text: data.drives.current.description } } : undefined,
+        leaders: data.leaders,
+        odds: data.pickcenter?.[0] ? [data.pickcenter[0]] : undefined,
+      }]
+    };
+
+    return parseESPNGame(event as any, sport);
+  } catch (error) {
+    console.error('Error fetching game details:', error);
+    return null;
   }
 }
 

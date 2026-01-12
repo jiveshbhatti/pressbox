@@ -80,6 +80,8 @@ export interface GameSituation {
   downDistanceText?: string; // e.g., "3rd & 2 at NE 3"
   lastPlay?: string; // description of last play
   isRedZone?: boolean;
+  yardLine?: number;
+  down?: number;
   homeTimeouts?: number;
   awayTimeouts?: number;
   odds?: {
@@ -112,6 +114,7 @@ export interface Game {
     player: string;
     stat: string;
     position?: string;
+    headshot?: string;
   }[];
 }
 

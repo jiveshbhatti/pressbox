@@ -4,9 +4,19 @@ import { Game } from '@/types';
 import { formatDistanceToNow } from '@/lib/utils';
 import Image from 'next/image';
 
+function hexToRgb(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ?
+    `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` :
+    '100, 116, 139';
+}
+
 interface GameCardProps {
   game: Game;
   onClick: () => void;
+  onToggleFavorite?: (teamAbbr: string) => void;
+  isAwayFavorite?: boolean;
+  isHomeFavorite?: boolean;
 }
 
 function TeamLogo({ src, alt, size = 40 }: { src?: string; alt: string; size?: number }) {
@@ -33,7 +43,13 @@ function TeamLogo({ src, alt, size = 40 }: { src?: string; alt: string; size?: n
   );
 }
 
-export function GameCard({ game, onClick }: GameCardProps) {
+export function GameCard({
+  game,
+  onClick,
+  onToggleFavorite,
+  isAwayFavorite,
+  isHomeFavorite
+}: GameCardProps) {
   const isLive = game.status === 'in_progress';
   const isFinal = game.status === 'final';
 
@@ -46,34 +62,36 @@ export function GameCard({ game, onClick }: GameCardProps) {
       onClick={onClick}
       className="w-full h-full rounded-[40px] p-0.5 relative group transition-all duration-700 hover:scale-[1.03] active:scale-[0.98]"
     >
-      {/* Diffuse Atmospheric Halos - More prominent team colors */}
+      {/* Diffuse Atmospheric Halos - VERY prominent team colors */}
       <div
-        className="absolute inset-x-[-15%] inset-y-[-40%] opacity-35 transition-opacity duration-1000 group-hover:opacity-55"
+        className="absolute inset-x-[-10%] inset-y-[-30%] opacity-70 transition-opacity duration-1000 group-hover:opacity-90"
         style={{
           background: `
-            radial-gradient(circle at 0% 50%, ${awayColor} 0%, transparent 55%),
-            radial-gradient(circle at 100% 50%, ${homeColor} 0%, transparent 55%)
+            radial-gradient(circle at 0% 50%, ${awayColor} 0%, transparent 40%),
+            radial-gradient(circle at 100% 50%, ${homeColor} 0%, transparent 40%)
           `,
-          filter: 'blur(80px)',
+          filter: 'blur(35px)',
         }}
       />
 
-      {/* Main Glass Card container */}
+      {/* Main Glass Card container - more transparent */}
       <div
-        className="relative glass h-full w-full rounded-[38px] p-8 flex flex-col items-stretch overflow-visible transition-colors duration-500 shadow-2xl shadow-slate-300/60"
+        className="relative h-full w-full rounded-[38px] p-8 flex flex-col items-stretch overflow-hidden transition-colors duration-500 shadow-2xl shadow-slate-400/40 dark:shadow-black/40"
         style={{
-          background: `linear-gradient(135deg, ${awayColor}30 0%, transparent 40%, transparent 60%, ${homeColor}30 100%), rgba(255, 255, 255, 0.65)`,
-          borderColor: 'rgba(255, 255, 255, 0.9)',
+          background: `linear-gradient(135deg, ${awayColor}70 0%, rgba(255,255,255,0.25) 25%, rgba(255,255,255,0.25) 75%, ${homeColor}70 100%)`,
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
         }}
       >
-        {/* Side Tints - More prominent team colors */}
-        <div className="absolute inset-x-0 inset-y-0 flex pointer-events-none rounded-[38px] overflow-hidden">
-          <div className="w-1/2 h-full opacity-25" style={{ background: `linear-gradient(to right, ${awayColor}, transparent 70%)` }} />
-          <div className="w-1/2 h-full opacity-25" style={{ background: `linear-gradient(to left, ${homeColor}, transparent 70%)` }} />
+        {/* Side Tints - Strong team color washes */}
+        <div className="absolute inset-0 flex pointer-events-none rounded-[38px] overflow-hidden">
+          <div className="w-1/2 h-full opacity-40" style={{ background: `linear-gradient(to right, ${awayColor}, transparent 60%)` }} />
+          <div className="w-1/2 h-full opacity-40" style={{ background: `linear-gradient(to left, ${homeColor}, transparent 60%)` }} />
         </div>
 
-        {/* Subtle Shine/Inner Glow */}
-        <div className="absolute inset-0 rounded-[38px] bg-gradient-to-br from-white/70 to-transparent pointer-events-none" />
+        {/* Subtle Shine/Inner Glow - reduced */}
+        <div className="absolute inset-0 rounded-[38px] bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
 
         {/* Top Label (Sport) */}
         <div className="flex justify-center mb-6 relative z-10">
@@ -88,20 +106,33 @@ export function GameCard({ game, onClick }: GameCardProps) {
           <div className="flex flex-col items-center gap-3 w-[100px]">
             <div className="relative group/logo">
               <div
-                className="absolute inset-0 rounded-full blur-xl opacity-40 group-hover/logo:opacity-60 transition-opacity"
+                className="absolute inset-x-0 inset-y-0 rounded-full blur-2xl opacity-0 group-hover/logo:opacity-50 transition-opacity"
                 style={{ backgroundColor: awayColor }}
               />
-              <div
-                className="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl border-2 shadow-lg transition-transform group-hover:scale-110 duration-500"
-                style={{ borderColor: `${awayColor}60` }}
-              >
+              {/* Possession Glow */}
+              {game.situation?.possession === game.awayTeam.id && (
+                <div
+                  className="absolute inset-[-12px] rounded-full blur-xl possession-glow z-0"
+                  style={{ '--possession-color': awayColor.startsWith('#') ? hexToRgb(awayColor) : '100, 116, 139' } as any}
+                />
+              )}
+              <div className="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl border border-white shadow-md transition-transform group-hover:scale-110 duration-500 z-10">
                 <TeamLogo src={game.awayTeam.logo} alt={game.awayTeam.abbreviation} size={50} />
+
+                {/* Favorite Toggle */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFavorite?.(game.awayTeam.abbreviation);
+                  }}
+                  className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center border shadow-sm transition-all ${isAwayFavorite
+                    ? 'bg-yellow-400 border-yellow-500 text-white scale-110 opacity-100'
+                    : 'bg-white border-slate-100 text-slate-300 opacity-0 group-hover/logo:opacity-100'
+                    }`}
+                >
+                  <span className="text-[10px]">{isAwayFavorite ? '★' : '☆'}</span>
+                </button>
               </div>
-              {/* Team color accent bar */}
-              <div
-                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
-                style={{ backgroundColor: awayColor }}
-              />
             </div>
             <div className="text-center">
               <div className="text-sm font-black text-slate-900 uppercase tracking-tight leading-tight">
@@ -143,7 +174,7 @@ export function GameCard({ game, onClick }: GameCardProps) {
               ) : isFinal ? (
                 <span className="text-[10px] font-black text-slate-400 tracking-[0.4em] uppercase">Final</span>
               ) : (
-                <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">
+                <span className="text-[10px] text-extrabold text-slate-500 uppercase tracking-widest">
                   {formatDistanceToNow(game.startTime)}
                 </span>
               )}
@@ -154,20 +185,36 @@ export function GameCard({ game, onClick }: GameCardProps) {
           <div className="flex flex-col items-center gap-3 w-[100px]">
             <div className="relative group/logo">
               <div
-                className="absolute inset-0 rounded-full blur-xl opacity-40 group-hover/logo:opacity-60 transition-opacity"
+                className="absolute inset-x-0 inset-y-0 rounded-full blur-2xl opacity-0 group-hover/logo:opacity-50 transition-opacity"
                 style={{ backgroundColor: homeColor }}
               />
+              {/* Possession Glow */}
+              {game.situation?.possession === game.homeTeam.id && (
+                <div
+                  className="absolute inset-[-12px] rounded-full blur-xl possession-glow z-0"
+                  style={{ '--possession-color': homeColor.startsWith('#') ? hexToRgb(homeColor) : '71, 85, 105' } as any}
+                />
+              )}
               <div
-                className="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl border-2 shadow-lg transition-transform group-hover:scale-110 duration-500"
+                className="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl border shadow-md transition-transform group-hover:scale-110 duration-500 z-10"
                 style={{ borderColor: `${homeColor}60` }}
               >
                 <TeamLogo src={game.homeTeam.logo} alt={game.homeTeam.abbreviation} size={50} />
+
+                {/* Favorite Toggle */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFavorite?.(game.homeTeam.abbreviation);
+                  }}
+                  className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center border shadow-sm transition-all ${isHomeFavorite
+                    ? 'bg-yellow-400 border-yellow-500 text-white scale-110 opacity-100'
+                    : 'bg-white border-slate-100 text-slate-300 opacity-0 group-hover/logo:opacity-100'
+                    }`}
+                >
+                  <span className="text-[10px]">{isHomeFavorite ? '★' : '☆'}</span>
+                </button>
               </div>
-              {/* Team color accent bar */}
-              <div
-                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
-                style={{ backgroundColor: homeColor }}
-              />
             </div>
             <div className="text-center">
               <div className="text-sm font-black text-slate-900 uppercase tracking-tight leading-tight">
