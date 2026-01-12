@@ -10,6 +10,8 @@ interface ESPNCompetitor {
     name: string;
     abbreviation: string;
     logo?: string;
+    color?: string;
+    alternateColor?: string;
   };
   score?: string;
   homeAway: 'home' | 'away';
@@ -137,6 +139,8 @@ function parseESPNGame(event: ESPNEvent, sport: Sport): Game {
       abbreviation: homeCompetitor.team.abbreviation,
       logo: homeCompetitor.team.logo,
       record: homeRecord,
+      color: homeCompetitor.team.color,
+      alternateColor: homeCompetitor.team.alternateColor,
     },
     awayTeam: {
       id: awayCompetitor.team.id,
@@ -144,6 +148,8 @@ function parseESPNGame(event: ESPNEvent, sport: Sport): Game {
       abbreviation: awayCompetitor.team.abbreviation,
       logo: awayCompetitor.team.logo,
       record: awayRecord,
+      color: awayCompetitor.team.color,
+      alternateColor: awayCompetitor.team.alternateColor,
     },
     homeScore: homeCompetitor.score ? parseInt(homeCompetitor.score, 10) : undefined,
     awayScore: awayCompetitor.score ? parseInt(awayCompetitor.score, 10) : undefined,

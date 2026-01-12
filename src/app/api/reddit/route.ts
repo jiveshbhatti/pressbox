@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
       headers: {
         'Accept': 'application/json',
       },
-      // Cache for 2 minutes on the server
-      next: { revalidate: 120 },
+      // Cache for 30 minutes - threads only posted once per game
+      next: { revalidate: 1800 },
     });
 
     if (!response.ok) {
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
       },
     });
   } catch (error) {

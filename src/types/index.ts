@@ -70,6 +70,8 @@ export interface Team {
   abbreviation: string;
   logo?: string;
   record?: string; // e.g., "14-3"
+  color?: string;
+  alternateColor?: string;
 }
 
 export interface GameSituation {

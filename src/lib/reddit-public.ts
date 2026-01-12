@@ -24,9 +24,10 @@ interface ArcticResponse {
   data: ArcticPost[];
 }
 
-// Client-side cache for threads (2 minute TTL)
+// Client-side cache for threads (30 minute TTL)
+// Threads only get posted once per game, so long cache is fine
 const threadCache = new Map<string, { threads: GameThread[]; timestamp: number }>();
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 // Get Unix timestamp for start of today (midnight local time)
 function getTodayStartTimestamp(): number {
