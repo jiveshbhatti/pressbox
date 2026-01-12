@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const subreddit = searchParams.get('subreddit');
   const query = searchParams.get('q');
+  const after = searchParams.get('after'); // Unix timestamp for date filtering
 
   if (!subreddit) {
     return NextResponse.json({ error: 'Missing subreddit parameter' }, { status: 400 });
@@ -15,11 +16,15 @@ export async function GET(request: NextRequest) {
     // Search for game threads using Arctic Shift (Pushshift replacement)
     const arcticUrl = new URL('https://arctic-shift.photon-reddit.com/api/posts/search');
     arcticUrl.searchParams.set('subreddit', subreddit);
-    arcticUrl.searchParams.set('sort', 'desc');
-    arcticUrl.searchParams.set('limit', '50');
+    arcticUrl.searchParams.set('limit', '25');
 
     if (query) {
       arcticUrl.searchParams.set('title', query);
+    }
+
+    // Filter to only get posts from today (or specified date)
+    if (after) {
+      arcticUrl.searchParams.set('after', after);
     }
 
     const response = await fetch(arcticUrl.toString(), {
