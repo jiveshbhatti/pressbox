@@ -72,6 +72,7 @@ export interface Team {
   record?: string; // e.g., "14-3"
   color?: string;
   alternateColor?: string;
+  isFavorite?: boolean;
 }
 
 export interface GameSituation {

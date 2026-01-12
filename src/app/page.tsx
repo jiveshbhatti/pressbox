@@ -14,7 +14,7 @@ function TeamLogo({ src, alt, size = 48 }: { src?: string; alt: string; size?: n
   if (!src) {
     return (
       <div
-        className="bg-slate-700 rounded-full flex items-center justify-center text-gray-400 text-sm font-bold"
+        className="bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-sm font-black"
         style={{ width: size, height: size }}
       >
         {alt.substring(0, 3)}
@@ -96,35 +96,31 @@ function HomePage() {
         <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-4">
           <button
             onClick={handleBack}
-            className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors"
+            className="flex items-center gap-2 text-slate-400 hover:text-slate-900 mb-4 transition-colors font-bold uppercase tracking-widest text-xs"
           >
             <span>←</span>
             <span>Back to games</span>
           </button>
 
-          {/* Enhanced Scoreboard */}
-          <div className="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
+          {/* Enhanced Scoreboard (Glass Style) */}
+          <div className="glass rounded-3xl p-6 mb-6">
             {/* Status bar */}
-            <div className="flex items-center justify-between mb-4">
-              <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${
-                selectedGame.sport === 'nfl'
-                  ? 'bg-green-900/50 text-green-400'
-                  : 'bg-orange-900/50 text-orange-400'
-              }`}>
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-slate-900/5 text-slate-400 border border-slate-900/5">
                 {selectedGame.sport}
               </span>
               {isLive ? (
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-red-400">
-                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  <span className="flex items-center gap-2 text-[10px] font-black text-red-600 tracking-tighter">
+                    <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse" />
                     LIVE
                   </span>
                   {selectedGame.statusDetail && (
-                    <span className="text-xs text-gray-400">{selectedGame.statusDetail}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{selectedGame.statusDetail}</span>
                   )}
                 </div>
               ) : isFinal ? (
-                <span className="text-xs font-medium text-gray-400">FINAL</span>
+                <span className="text-[10px] font-black text-slate-300 tracking-[0.3em] uppercase italic">Final Score</span>
               ) : null}
             </div>
 
@@ -142,21 +138,19 @@ function HomePage() {
               {/* Score */}
               <div className="flex flex-col items-center">
                 {(isLive || isFinal) ? (
-                  <div className="flex items-center gap-3">
-                    <span className={`text-4xl font-bold tabular-nums ${
-                      selectedGame.awayScore! > selectedGame.homeScore! ? 'text-white' : 'text-gray-500'
-                    }`}>
+                  <div className="flex items-center gap-4">
+                    <span className={`text-5xl font-black tabular-nums tracking-tighter ${selectedGame.awayScore! > selectedGame.homeScore! ? 'text-slate-900' : 'text-slate-300'
+                      }`}>
                       {selectedGame.awayScore}
                     </span>
-                    <span className="text-2xl text-gray-600">-</span>
-                    <span className={`text-4xl font-bold tabular-nums ${
-                      selectedGame.homeScore! > selectedGame.awayScore! ? 'text-white' : 'text-gray-500'
-                    }`}>
+                    <span className="text-2xl font-black text-slate-200">—</span>
+                    <span className={`text-5xl font-black tabular-nums tracking-tighter ${selectedGame.homeScore! > selectedGame.awayScore! ? 'text-slate-900' : 'text-slate-300'
+                      }`}>
                       {selectedGame.homeScore}
                     </span>
                   </div>
                 ) : (
-                  <div className="text-lg font-medium text-gray-400">@</div>
+                  <div className="text-sm font-black text-slate-400 uppercase tracking-widest">@</div>
                 )}
               </div>
 
@@ -172,15 +166,14 @@ function HomePage() {
 
             {/* Game Situation (NFL) */}
             {isLive && selectedGame.situation?.downDistanceText && (
-              <div className={`mt-4 pt-3 border-t border-slate-700 text-center ${
-                selectedGame.situation.isRedZone ? 'text-red-400' : 'text-yellow-400'
-              }`}>
-                <p className="text-sm font-medium">
+              <div className="mt-8 pt-6 border-t border-slate-900/5 text-center">
+                <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${selectedGame.situation.isRedZone ? 'text-red-600' : 'text-slate-900'
+                  }`}>
                   🏈 {selectedGame.situation.downDistanceText}
-                  {selectedGame.situation.isRedZone && ' 🔴 Red Zone'}
+                  {selectedGame.situation.isRedZone && ' • Red Zone'}
                 </p>
                 {selectedGame.situation.lastPlay && (
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                  <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-tight line-clamp-2">
                     {selectedGame.situation.lastPlay}
                   </p>
                 )}
@@ -191,7 +184,7 @@ function HomePage() {
           <ThreadList
             threads={threads}
             selectedThreadId={null}
-            onSelectThread={() => {}}
+            onSelectThread={() => { }}
             isLoading={isLoadingThreads}
           />
         </main>
@@ -205,18 +198,17 @@ function HomePage() {
       <Header />
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-4">
         {/* Sport filter */}
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-8">
           {(['all', 'nfl', 'nba'] as const).map(sport => (
             <button
               key={sport}
               onClick={() => setSportFilter(sport)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                sportFilter === sport
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-slate-800 text-gray-400 hover:text-white'
-              }`}
+              className={`px-6 py-2 rounded-full font-black text-[10px] transition-all uppercase tracking-[0.2em] ${sportFilter === sport
+                  ? 'bg-slate-900 text-white shadow-lg'
+                  : 'bg-white text-slate-400 border border-slate-100 hover:text-slate-900'
+                }`}
             >
-              {sport === 'all' ? 'All Games' : sport.toUpperCase()}
+              {sport === 'all' ? 'All' : sport}
             </button>
           ))}
         </div>
@@ -225,10 +217,10 @@ function HomePage() {
         {isLoadingGames ? (
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="bg-slate-800 rounded-xl p-4 animate-pulse">
-                <div className="h-4 bg-slate-700 rounded w-16 mb-4" />
-                <div className="h-5 bg-slate-700 rounded w-48 mb-2" />
-                <div className="h-5 bg-slate-700 rounded w-40" />
+              <div key={i} className="glass rounded-3xl p-8 animate-pulse">
+                <div className="h-4 bg-slate-100 rounded-full w-20 mb-6" />
+                <div className="h-10 bg-slate-100 rounded-2xl w-full mb-4" />
+                <div className="h-4 bg-slate-100 rounded-full w-3/4" />
               </div>
             ))}
           </div>

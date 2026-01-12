@@ -13,7 +13,7 @@ function TeamLogo({ src, alt, size = 40 }: { src?: string; alt: string; size?: n
   if (!src) {
     return (
       <div
-        className="bg-slate-700 rounded-full flex items-center justify-center text-gray-400 text-xs font-bold"
+        className="bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xs font-black"
         style={{ width: size, height: size }}
       >
         {alt.substring(0, 2)}
@@ -37,154 +37,159 @@ export function GameCard({ game, onClick }: GameCardProps) {
   const isLive = game.status === 'in_progress';
   const isFinal = game.status === 'final';
 
-  // Find game leaders for each team
-  const homeLeader = game.leaders?.find(l => l.teamId === game.homeTeam.id);
-  const awayLeader = game.leaders?.find(l => l.teamId === game.awayTeam.id);
-
-  // Team colors (defaults to slate if not provided)
-  const awayColor = game.awayTeam.color ? `#${game.awayTeam.color}` : '#334155';
-  const homeColor = game.homeTeam.color ? `#${game.homeTeam.color}` : '#1e293b';
+  // Team colors (fallback to neutral slate)
+  const awayColor = game.awayTeam.color ? `#${game.awayTeam.color}` : '#64748b';
+  const homeColor = game.homeTeam.color ? `#${game.homeTeam.color}` : '#475569';
 
   return (
     <button
       onClick={onClick}
-      className="w-full h-full rounded-2xl p-[1px] relative overflow-hidden group transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
-      style={{
-        background: `linear-gradient(135deg, ${awayColor}44 0%, ${homeColor}44 100%)`,
-      }}
+      className="w-full h-full rounded-[40px] p-0.5 relative group transition-all duration-700 hover:scale-[1.03] active:scale-[0.98]"
     >
-      {/* Background Split Team Colors */}
+      {/* Diffuse Atmospheric Halos - More prominent team colors */}
       <div
-        className="absolute inset-0 opacity-40 transition-opacity group-hover:opacity-60"
+        className="absolute inset-x-[-15%] inset-y-[-40%] opacity-35 transition-opacity duration-1000 group-hover:opacity-55"
         style={{
-          background: `linear-gradient(to right, ${awayColor} 0%, ${awayColor} 50%, ${homeColor} 50%, ${homeColor} 100%)`,
+          background: `
+            radial-gradient(circle at 0% 50%, ${awayColor} 0%, transparent 55%),
+            radial-gradient(circle at 100% 50%, ${homeColor} 0%, transparent 55%)
+          `,
+          filter: 'blur(80px)',
         }}
       />
 
-      {/* Glass Inner Layer */}
-      <div className="relative glass h-full w-full rounded-[15px] p-5 flex flex-col justify-between overflow-hidden">
-        {/* Subtle radial glow based on team with possession or live status */}
-        <div className={`absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full blur-[60px] opacity-20 transition-all ${isLive ? 'bg-white scale-110' : 'bg-transparent'
-          }`} />
+      {/* Main Glass Card container */}
+      <div
+        className="relative glass h-full w-full rounded-[38px] p-8 flex flex-col items-stretch overflow-visible transition-colors duration-500 shadow-2xl shadow-slate-300/60"
+        style={{
+          background: `linear-gradient(135deg, ${awayColor}30 0%, transparent 40%, transparent 60%, ${homeColor}30 100%), rgba(255, 255, 255, 0.65)`,
+          borderColor: 'rgba(255, 255, 255, 0.9)',
+        }}
+      >
+        {/* Side Tints - More prominent team colors */}
+        <div className="absolute inset-x-0 inset-y-0 flex pointer-events-none rounded-[38px] overflow-hidden">
+          <div className="w-1/2 h-full opacity-25" style={{ background: `linear-gradient(to right, ${awayColor}, transparent 70%)` }} />
+          <div className="w-1/2 h-full opacity-25" style={{ background: `linear-gradient(to left, ${homeColor}, transparent 70%)` }} />
+        </div>
 
-        <div className="relative z-10">
-          {/* Header: Sport & Status */}
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold tracking-tighter uppercase px-2 py-0.5 rounded-full bg-white/10 text-white/90 border border-white/5">
-                {game.sport}
-              </span>
-              {game.situation?.odds?.spread && (
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                  {game.situation.odds.spread}
-                </span>
-              )}
-            </div>
+        {/* Subtle Shine/Inner Glow */}
+        <div className="absolute inset-0 rounded-[38px] bg-gradient-to-br from-white/70 to-transparent pointer-events-none" />
 
-            {isLive ? (
-              <div className="flex flex-col items-end">
-                <span className="flex items-center gap-1.5 text-xs font-black text-red-500">
-                  <span className="w-2 h-2 bg-red-500 rounded-full animate-live" />
-                  LIVE
-                </span>
-                <span className="text-[10px] font-black text-white/40 mt-0.5 uppercase">
-                  {game.clock} • Q{game.period}
-                </span>
+        {/* Top Label (Sport) */}
+        <div className="flex justify-center mb-6 relative z-10">
+          <span className="text-[9px] font-black tracking-[0.3em] uppercase px-4 py-1 rounded-full bg-slate-900/5 text-slate-500 border border-slate-900/10">
+            {game.sport}
+          </span>
+        </div>
+
+        {/* Main Scoreboard Row: Team - Score - Team */}
+        <div className="flex items-center justify-between gap-2 mb-4 relative z-10">
+          {/* Away Team */}
+          <div className="flex flex-col items-center gap-3 w-[100px]">
+            <div className="relative group/logo">
+              <div
+                className="absolute inset-0 rounded-full blur-xl opacity-40 group-hover/logo:opacity-60 transition-opacity"
+                style={{ backgroundColor: awayColor }}
+              />
+              <div
+                className="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl border-2 shadow-lg transition-transform group-hover:scale-110 duration-500"
+                style={{ borderColor: `${awayColor}60` }}
+              >
+                <TeamLogo src={game.awayTeam.logo} alt={game.awayTeam.abbreviation} size={50} />
               </div>
-            ) : isFinal ? (
-              <span className="text-[10px] font-black text-white/30 tracking-widest uppercase">Final</span>
-            ) : (
-              <span className="text-[10px] font-black text-white/40 uppercase">
-                {formatDistanceToNow(game.startTime)}
-              </span>
-            )}
+              {/* Team color accent bar */}
+              <div
+                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
+                style={{ backgroundColor: awayColor }}
+              />
+            </div>
+            <div className="text-center">
+              <div className="text-sm font-black text-slate-900 uppercase tracking-tight leading-tight">
+                {game.awayTeam.name}
+              </div>
+              <div className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-widest italic">
+                {game.awayTeam.abbreviation}
+              </div>
+            </div>
           </div>
 
-          {/* Teams & Scores */}
-          <div className="space-y-6">
-            {/* Away Team */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <TeamLogo src={game.awayTeam.logo} alt={game.awayTeam.abbreviation} size={42} />
-                  {game.situation?.possession === game.awayTeam.abbreviation && (
-                    <div className="absolute -right-1 -top-1 w-3 h-3 bg-white rounded-full border-2 border-slate-900" />
-                  )}
-                </div>
-                <div>
-                  <div className="text-lg font-black text-white leading-none tracking-tight uppercase">
-                    {game.awayTeam.name}
-                  </div>
-                  <div className="text-[10px] text-white/40 font-bold mt-1 uppercase tracking-tighter">
-                    {game.awayTeam.record || '0-0'}
-                  </div>
-                </div>
-              </div>
-              {(isLive || isFinal) && (
-                <span className={`text-4xl font-black tabular-nums tracking-tighter ${isFinal && game.awayScore! > game.homeScore! ? 'text-white' :
-                    isLive ? 'text-white' : 'text-white/30'
-                  }`}>
+          {/* Centered Score & Status */}
+          <div className="flex flex-col items-center flex-1">
+            {(isLive || isFinal) ? (
+              <div className="flex items-center gap-6">
+                <span className={`text-6xl font-black tabular-nums tracking-tighter text-slate-900`}>
                   {game.awayScore ?? '-'}
+                </span>
+                <span className="text-2xl font-black text-slate-300">—</span>
+                <span className={`text-6xl font-black tabular-nums tracking-tighter text-slate-900`}>
+                  {game.homeScore ?? '-'}
+                </span>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Kickoff</div>
+              </div>
+            )}
+
+            {/* Status Indicator */}
+            <div className="mt-4">
+              {isLive ? (
+                <div className="flex flex-col items-center gap-1">
+                  <span className="flex items-center gap-2 text-[10px] font-black text-red-600 tracking-widest uppercase">
+                    <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.5)]" />
+                    {game.clock} {game.period}P
+                  </span>
+                </div>
+              ) : isFinal ? (
+                <span className="text-[10px] font-black text-slate-400 tracking-[0.4em] uppercase">Final</span>
+              ) : (
+                <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">
+                  {formatDistanceToNow(game.startTime)}
                 </span>
               )}
             </div>
+          </div>
 
-            {/* Home Team */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <TeamLogo src={game.homeTeam.logo} alt={game.homeTeam.abbreviation} size={42} />
-                  {game.situation?.possession === game.homeTeam.abbreviation && (
-                    <div className="absolute -right-1 -top-1 w-3 h-3 bg-white rounded-full border-2 border-slate-900" />
-                  )}
-                </div>
-                <div>
-                  <div className="text-lg font-black text-white leading-none tracking-tight uppercase">
-                    {game.homeTeam.name}
-                  </div>
-                  <div className="text-[10px] text-white/40 font-bold mt-1 uppercase tracking-tighter">
-                    {game.homeTeam.record || '0-0'}
-                  </div>
-                </div>
+          {/* Home Team */}
+          <div className="flex flex-col items-center gap-3 w-[100px]">
+            <div className="relative group/logo">
+              <div
+                className="absolute inset-0 rounded-full blur-xl opacity-40 group-hover/logo:opacity-60 transition-opacity"
+                style={{ backgroundColor: homeColor }}
+              />
+              <div
+                className="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl border-2 shadow-lg transition-transform group-hover:scale-110 duration-500"
+                style={{ borderColor: `${homeColor}60` }}
+              >
+                <TeamLogo src={game.homeTeam.logo} alt={game.homeTeam.abbreviation} size={50} />
               </div>
-              {(isLive || isFinal) && (
-                <span className={`text-4xl font-black tabular-nums tracking-tighter ${isFinal && game.homeScore! > game.awayScore! ? 'text-white' :
-                    isLive ? 'text-white' : 'text-white/30'
-                  }`}>
-                  {game.homeScore ?? '-'}
-                </span>
-              )}
+              {/* Team color accent bar */}
+              <div
+                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
+                style={{ backgroundColor: homeColor }}
+              />
+            </div>
+            <div className="text-center">
+              <div className="text-sm font-black text-slate-900 uppercase tracking-tight leading-tight">
+                {game.homeTeam.name}
+              </div>
+              <div className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-widest italic">
+                {game.homeTeam.abbreviation}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Footer Info */}
-        <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between relative z-10">
-          {isLive && game.situation?.downDistanceText ? (
-            <p className={`text-[11px] font-black uppercase tracking-widest ${game.situation.isRedZone ? 'text-red-400' : 'text-yellow-400'}`}>
-              {game.situation.downDistanceText}
-            </p>
-          ) : (awayLeader || homeLeader) ? (
-            <div className="flex gap-4">
-              {[awayLeader, homeLeader].filter(Boolean).map((leader, i) => (
-                <div key={i} className="flex flex-col">
-                  <span className="text-[8px] font-black text-white/30 uppercase">Leader</span>
-                  <span className="text-[10px] font-bold text-white/60 uppercase">
-                    {leader!.player.split(' ').pop()} {leader!.stat}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : game.venue ? (
-            <p className="text-[10px] text-white/30 font-bold uppercase truncate max-w-[150px]">
-              {game.venue}
-            </p>
-          ) : <div />}
-
-          <div className="flex items-center gap-1.5 text-[10px] font-black text-white/50 group-hover:text-white transition-colors uppercase tracking-widest">
-            Threads
-            <span className="text-xs group-hover:translate-x-1 transition-transform">→</span>
-          </div>
+        {/* Bottom Details (Odds / Venue) */}
+        <div className="mt-6 flex justify-center gap-6 relative z-10">
+          {game.situation?.odds?.spread && (
+            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-r border-slate-200 pr-6">
+              {game.situation.odds.spread}
+            </span>
+          )}
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            {game.venue || 'TBD'}
+          </span>
         </div>
       </div>
     </button>
