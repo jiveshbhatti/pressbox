@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Use Pullpush API to search for Reddit game threads
+// Use Arctic Shift API to search for Reddit game threads
 // This is a Reddit archive that isn't blocked like direct Reddit access
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -12,18 +12,17 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Search for game threads using Pullpush (Pushshift replacement)
-    const pullpushUrl = new URL('https://api.pullpush.io/reddit/search/submission/');
-    pullpushUrl.searchParams.set('subreddit', subreddit);
-    pullpushUrl.searchParams.set('sort', 'desc');
-    pullpushUrl.searchParams.set('sort_type', 'created_utc');
-    pullpushUrl.searchParams.set('limit', '50');
+    // Search for game threads using Arctic Shift (Pushshift replacement)
+    const arcticUrl = new URL('https://arctic-shift.photon-reddit.com/api/posts/search');
+    arcticUrl.searchParams.set('subreddit', subreddit);
+    arcticUrl.searchParams.set('sort', 'desc');
+    arcticUrl.searchParams.set('limit', '50');
 
     if (query) {
-      pullpushUrl.searchParams.set('q', query);
+      arcticUrl.searchParams.set('title', query);
     }
 
-    const response = await fetch(pullpushUrl.toString(), {
+    const response = await fetch(arcticUrl.toString(), {
       headers: {
         'Accept': 'application/json',
       },
@@ -32,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: `Pullpush API error: ${response.status}` },
+        { error: `Arctic Shift API error: ${response.status}` },
         { status: response.status }
       );
     }
@@ -45,9 +44,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Pullpush proxy error:', error);
+    console.error('Arctic Shift proxy error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch from Pullpush' },
+      { error: 'Failed to fetch from Arctic Shift' },
       { status: 500 }
     );
   }
