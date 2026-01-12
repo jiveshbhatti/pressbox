@@ -79,6 +79,14 @@ export interface GameSituation {
   isRedZone?: boolean;
   homeTimeouts?: number;
   awayTimeouts?: number;
+  odds?: {
+    spread?: string;
+    overUnder?: number;
+  };
+  probability?: {
+    home?: number;
+    away?: number;
+  };
 }
 
 export interface Game {
@@ -96,6 +104,12 @@ export interface Game {
   clock?: string; // e.g., "8:18"
   statusDetail?: string; // e.g., "8:18 - 2nd Quarter" or "Final"
   situation?: GameSituation;
+  leaders?: {
+    teamId: string;
+    player: string;
+    stat: string;
+    position?: string;
+  }[];
 }
 
 export interface GameThread {

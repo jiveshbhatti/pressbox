@@ -91,6 +91,43 @@ function parseESPNGame(event: ESPNEvent, sport: Sport): Game {
     };
   }
 
+  // Parse odds
+  const odds = (competition as any).odds?.[0];
+  if (odds && situation) {
+    situation.odds = {
+      spread: odds.details,
+      overUnder: odds.overUnder,
+    };
+  }
+
+  // Parse win probability
+  const prob = (competition as any).probability;
+  if (prob && situation) {
+    // ESPN sometimes returns home/away probability
+    situation.probability = {
+      home: prob.homeWinPercentage,
+      away: prob.awayWinPercentage,
+    };
+  }
+
+  // Parse leaders
+  const leaders: Game['leaders'] = [];
+  const espnLeaders = (competition as any).leaders;
+  if (espnLeaders && Array.isArray(espnLeaders)) {
+    espnLeaders.forEach((l: any) => {
+      const teamId = l.team?.id;
+      const leader = l.leaders?.[0];
+      if (teamId && leader) {
+        leaders.push({
+          teamId,
+          player: leader.athlete?.displayName || 'Unknown',
+          stat: leader.displayValue || '',
+          position: leader.athlete?.position?.abbreviation,
+        });
+      }
+    });
+  }
+
   return {
     id: event.id,
     sport,
@@ -117,6 +154,7 @@ function parseESPNGame(event: ESPNEvent, sport: Sport): Game {
     clock: event.status.displayClock,
     statusDetail: event.status.type.shortDetail || event.status.type.detail,
     situation,
+    leaders,
   };
 }
 

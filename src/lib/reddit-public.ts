@@ -24,6 +24,10 @@ interface ArcticResponse {
   data: ArcticPost[];
 }
 
+// Client-side cache for threads (2 minute TTL)
+const threadCache = new Map<string, { threads: GameThread[]; timestamp: number }>();
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
 // Get Unix timestamp for start of today (midnight local time)
 function getTodayStartTimestamp(): number {
   const now = new Date();
@@ -109,6 +113,13 @@ function matchesGame(post: ArcticPost, game: Game): boolean {
 
 // Find game threads for a specific game using Arctic Shift
 export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
+  // Check cache first
+  const cacheKey = game.id;
+  const cached = threadCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.threads;
+  }
+
   // Main subreddit first (NFL or NBA), then team subreddits
   const mainSub = game.sport === 'nfl' ? 'nfl' : 'nba';
   const teamSubs: string[] = [];
@@ -128,37 +139,22 @@ export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
   const threads: GameThread[] = [];
   const seenIds = new Set<string>();
 
-  // FIRST: Search main subreddit (NFL/NBA) - this is the priority
-  try {
-    const mainPosts = await searchArcticShift(mainSub, 'game thread');
-    for (const post of mainPosts) {
-      if (isGameThread(post) && matchesGame(post, game)) {
-        seenIds.add(post.id);
-        threads.push({
-          post: toRedditPost(post),
-          subreddit: mainSub,
-          isMainThread: true,
-        });
-      }
-    }
-  } catch (error) {
-    console.error(`Error searching ${mainSub}:`, error);
-  }
-
-  // SECOND: Search team subreddits in parallel (secondary)
-  const teamResults = await Promise.all(
-    teamSubs.map(async (subreddit) => {
+  // Search ALL subreddits in parallel for faster loading
+  const allSubs = [mainSub, ...teamSubs];
+  const allResults = await Promise.all(
+    allSubs.map(async (subreddit) => {
       try {
         const posts = await searchArcticShift(subreddit, 'game thread');
-        return { subreddit, posts };
+        return { subreddit, posts, isMain: subreddit === mainSub };
       } catch (error) {
         console.error(`Error searching ${subreddit}:`, error);
-        return { subreddit, posts: [] };
+        return { subreddit, posts: [], isMain: subreddit === mainSub };
       }
     })
   );
 
-  for (const { subreddit, posts } of teamResults) {
+  // Process results - main subreddit threads are marked as main
+  for (const { subreddit, posts, isMain } of allResults) {
     for (const post of posts) {
       if (seenIds.has(post.id)) continue;
 
@@ -167,16 +163,21 @@ export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
         threads.push({
           post: toRedditPost(post),
           subreddit,
-          isMainThread: false,
+          isMainThread: isMain,
         });
       }
     }
   }
 
   // Sort: main thread first, then by comment count
-  return threads.sort((a, b) => {
+  const sortedThreads = threads.sort((a, b) => {
     if (a.isMainThread && !b.isMainThread) return -1;
     if (!a.isMainThread && b.isMainThread) return 1;
     return b.post.num_comments - a.post.num_comments;
   });
+
+  // Cache the results
+  threadCache.set(cacheKey, { threads: sortedThreads, timestamp: Date.now() });
+
+  return sortedThreads;
 }
