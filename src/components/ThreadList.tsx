@@ -10,7 +10,15 @@ interface ThreadListProps {
   isLoading: boolean;
 }
 
-export function ThreadList({ threads, selectedThreadId, onSelectThread, isLoading }: ThreadListProps) {
+// Get Reddit URL that opens in the Reddit app on mobile
+function getRedditUrl(thread: GameThread): string {
+  const permalink = thread.post.permalink.startsWith('/')
+    ? thread.post.permalink
+    : `/${thread.post.permalink}`;
+  return `https://reddit.com${permalink}`;
+}
+
+export function ThreadList({ threads, isLoading }: ThreadListProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -35,15 +43,16 @@ export function ThreadList({ threads, selectedThreadId, onSelectThread, isLoadin
 
   return (
     <div className="space-y-2">
+      <p className="text-xs text-gray-500 mb-3">
+        Tap a thread to open in Reddit app
+      </p>
       {threads.map(thread => (
-        <button
+        <a
           key={thread.post.id}
-          onClick={() => onSelectThread(thread)}
-          className={`w-full text-left p-4 rounded-lg border transition-all ${
-            selectedThreadId === thread.post.id
-              ? 'bg-orange-900/30 border-orange-600'
-              : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-          }`}
+          href={getRedditUrl(thread)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full text-left p-4 rounded-lg border bg-slate-800 border-slate-700 hover:border-slate-600 hover:bg-slate-750 transition-all"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
@@ -66,9 +75,9 @@ export function ThreadList({ threads, selectedThreadId, onSelectThread, isLoadin
                 <span>{formatRelativeTime(thread.post.created_utc)}</span>
               </div>
             </div>
-            <span className="text-gray-500">→</span>
+            <span className="text-orange-400 text-lg">↗</span>
           </div>
-        </button>
+        </a>
       ))}
     </div>
   );

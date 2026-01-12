@@ -47,6 +47,7 @@ export interface RedditPost {
   permalink: string;
   subreddit: string;
   link_flair_text?: string;
+  stickied?: boolean;
 }
 
 export interface RedditSearchResult {

@@ -1,84 +1,64 @@
-// Public Reddit JSON API (no auth required)
-// Uses our API proxy to avoid CORS issues
-// Cannot post, vote, or access private content
+// Public Reddit thread finder using Pullpush API
+// Returns thread links that open directly in Reddit app
+// Cannot fetch comments - just links to threads
 
-import { RedditPost, RedditComment, Game, GameThread } from '@/types';
+import { RedditPost, Game, GameThread } from '@/types';
 import { NFL_TEAM_SUBREDDITS, NBA_TEAM_SUBREDDITS } from './constants';
 
-interface RedditListingResponse {
-  kind: string;
-  data: {
-    children: Array<{
-      kind: string;
-      data: RedditPost;
-    }>;
-    after?: string;
-  };
+interface PullpushPost {
+  id: string;
+  title: string;
+  author: string;
+  subreddit: string;
+  permalink: string;
+  url: string;
+  selftext: string;
+  created_utc: number;
+  score: number;
+  num_comments: number;
+  link_flair_text?: string;
+  stickied?: boolean;
 }
 
-interface RedditCommentsResponse {
-  kind: string;
-  data: {
-    children: Array<{
-      kind: string;
-      data: RedditComment;
-    }>;
-  };
+interface PullpushResponse {
+  data: PullpushPost[];
 }
 
-// Fetch from our proxy API
-async function fetchReddit(path: string) {
-  const response = await fetch(`/api/reddit?path=${encodeURIComponent(path)}`);
+// Search for posts using Pullpush API (via our proxy)
+async function searchPullpush(subreddit: string, query?: string): Promise<PullpushPost[]> {
+  const params = new URLSearchParams({ subreddit });
+  if (query) params.set('q', query);
+
+  const response = await fetch(`/api/reddit?${params.toString()}`);
 
   if (!response.ok) {
-    throw new Error(`Reddit API error: ${response.status}`);
+    throw new Error(`Pullpush API error: ${response.status}`);
   }
 
-  return response.json();
+  const data: PullpushResponse = await response.json();
+  return data.data || [];
 }
 
-// Fetch hot posts from a subreddit (public)
-export async function getSubredditPosts(
-  subreddit: string,
-  limit = 50
-): Promise<RedditPost[]> {
-  try {
-    const data: RedditListingResponse = await fetchReddit(
-      `/r/${subreddit}/hot.json?limit=${limit}`
-    );
-    return data.data.children.map(c => c.data);
-  } catch (error) {
-    console.error(`Error fetching ${subreddit}:`, error);
-    return [];
-  }
-}
-
-// Fetch comments for a post (public)
-export async function getPostCommentsPublic(
-  subreddit: string,
-  postId: string,
-  sort: 'new' | 'best' | 'top' | 'controversial' = 'new',
-  limit = 100
-): Promise<{ post: RedditPost; comments: RedditComment[] }> {
-  try {
-    const data: [RedditListingResponse, RedditCommentsResponse] = await fetchReddit(
-      `/r/${subreddit}/comments/${postId}.json?sort=${sort}&limit=${limit}`
-    );
-
-    const post = data[0].data.children[0]?.data;
-    const comments = data[1].data.children
-      .filter(c => c.kind === 't1' && c.data.body) // t1 = comment
-      .map(c => c.data);
-
-    return { post, comments };
-  } catch (error) {
-    console.error('Error fetching comments:', error);
-    throw error;
-  }
+// Convert Pullpush post to our RedditPost type
+function toRedditPost(post: PullpushPost): RedditPost {
+  return {
+    id: post.id,
+    title: post.title,
+    author: post.author,
+    subreddit: post.subreddit,
+    permalink: post.permalink || `/r/${post.subreddit}/comments/${post.id}`,
+    url: post.url,
+    selftext: post.selftext || '',
+    created_utc: post.created_utc,
+    score: post.score || 0,
+    num_comments: post.num_comments || 0,
+    link_flair_text: post.link_flair_text,
+    stickied: post.stickied || false,
+  };
 }
 
 // Check if a post is a game thread
-function isGameThread(post: RedditPost): boolean {
+function isGameThread(post: PullpushPost): boolean {
   const title = post.title.toLowerCase();
   const flair = (post.link_flair_text || '').toLowerCase();
 
@@ -98,7 +78,7 @@ function isGameThread(post: RedditPost): boolean {
 }
 
 // Check if post matches the game
-function matchesGame(post: RedditPost, game: Game): boolean {
+function matchesGame(post: PullpushPost, game: Game): boolean {
   const text = (post.title + ' ' + (post.selftext || '')).toLowerCase();
 
   const homeTerms = [
@@ -119,7 +99,7 @@ function matchesGame(post: RedditPost, game: Game): boolean {
   return hasHome || hasAway;
 }
 
-// Find game threads for a specific game (public, no auth)
+// Find game threads for a specific game using Pullpush
 export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
   const subreddits: string[] = [];
 
@@ -141,11 +121,17 @@ export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
   const threads: GameThread[] = [];
   const seenIds = new Set<string>();
 
-  // Fetch from each subreddit in parallel
+  // Search each subreddit for game threads
   const results = await Promise.all(
     subreddits.map(async (subreddit) => {
-      const posts = await getSubredditPosts(subreddit);
-      return { subreddit, posts };
+      try {
+        // Search for "game thread" in each subreddit
+        const posts = await searchPullpush(subreddit, 'game thread');
+        return { subreddit, posts };
+      } catch (error) {
+        console.error(`Error searching ${subreddit}:`, error);
+        return { subreddit, posts: [] };
+      }
     })
   );
 
@@ -156,7 +142,7 @@ export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
       if (isGameThread(post) && matchesGame(post, game)) {
         seenIds.add(post.id);
         threads.push({
-          post,
+          post: toRedditPost(post),
           subreddit,
           isMainThread: subreddit === 'nfl' || subreddit === 'nba',
         });

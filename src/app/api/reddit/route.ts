@@ -1,61 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Use Edge Runtime - runs on Cloudflare's network with different IPs
-export const runtime = 'edge';
-
-// Proxy requests to Reddit's public JSON API to avoid CORS issues
+// Use Pullpush API to search for Reddit game threads
+// This is a Reddit archive that isn't blocked like direct Reddit access
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const path = searchParams.get('path');
+  const subreddit = searchParams.get('subreddit');
+  const query = searchParams.get('q');
 
-  if (!path) {
-    return NextResponse.json({ error: 'Missing path parameter' }, { status: 400 });
+  if (!subreddit) {
+    return NextResponse.json({ error: 'Missing subreddit parameter' }, { status: 400 });
   }
 
-  // Try multiple Reddit endpoints - some may work better than others
-  const endpoints = [
-    `https://www.reddit.com${path}`,
-    `https://old.reddit.com${path}`,
-    `https://api.reddit.com${path}`,
-  ];
+  try {
+    // Search for game threads using Pullpush (Pushshift replacement)
+    const pullpushUrl = new URL('https://api.pullpush.io/reddit/search/submission/');
+    pullpushUrl.searchParams.set('subreddit', subreddit);
+    pullpushUrl.searchParams.set('sort', 'desc');
+    pullpushUrl.searchParams.set('sort_type', 'created_utc');
+    pullpushUrl.searchParams.set('limit', '50');
 
-  // Browser-like headers to avoid bot detection
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Cache-Control': 'no-cache',
-    'Pragma': 'no-cache',
-  };
-
-  let lastError = '';
-
-  for (const redditUrl of endpoints) {
-    try {
-      const response = await fetch(redditUrl, {
-        headers,
-        cache: 'no-store',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return NextResponse.json(data, {
-          headers: {
-            'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
-          },
-        });
-      }
-
-      lastError = `${response.status} from ${new URL(redditUrl).hostname}`;
-    } catch (error) {
-      lastError = `Error from ${new URL(redditUrl).hostname}: ${error}`;
+    if (query) {
+      pullpushUrl.searchParams.set('q', query);
     }
-  }
 
-  console.error('Reddit proxy error:', lastError);
-  return NextResponse.json(
-    { error: `Failed to fetch from Reddit: ${lastError}` },
-    { status: 502 }
-  );
+    const response = await fetch(pullpushUrl.toString(), {
+      headers: {
+        'Accept': 'application/json',
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `Pullpush API error: ${response.status}` },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
+  } catch (error) {
+    console.error('Pullpush proxy error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch from Pullpush' },
+      { status: 500 }
+    );
+  }
 }

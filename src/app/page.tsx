@@ -1,22 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { Header } from '@/components/Header';
 import { GameCard } from '@/components/GameCard';
 import { ThreadList } from '@/components/ThreadList';
-import { Comments } from '@/components/Comments';
 import { Game, GameThread, Sport } from '@/types';
 import { getAllGames } from '@/lib/sports';
-import { findGameThreads } from '@/lib/threads';
 import { findGameThreadsPublic } from '@/lib/reddit-public';
 
 function HomePage() {
-  const { accessToken, isAuthenticated, isLoading: authLoading } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [threads, setThreads] = useState<GameThread[]>([]);
-  const [selectedThread, setSelectedThread] = useState<GameThread | null>(null);
   const [isLoadingGames, setIsLoadingGames] = useState(true);
   const [isLoadingThreads, setIsLoadingThreads] = useState(false);
   const [sportFilter, setSportFilter] = useState<Sport | 'all'>('all');
@@ -42,47 +38,28 @@ function HomePage() {
   // Fetch threads when a game is selected
   const handleSelectGame = useCallback(async (game: Game) => {
     setSelectedGame(game);
-    setSelectedThread(null);
     setThreads([]);
     setIsLoadingThreads(true);
 
     try {
-      // Use authenticated API if available, otherwise use public JSON
-      const gameThreads = accessToken
-        ? await findGameThreads(accessToken, game)
-        : await findGameThreadsPublic(game);
+      // Use Pullpush to find game threads
+      const gameThreads = await findGameThreadsPublic(game);
       setThreads(gameThreads);
     } catch (error) {
       console.error('Error fetching threads:', error);
     } finally {
       setIsLoadingThreads(false);
     }
-  }, [accessToken]);
+  }, []);
 
   const handleBack = () => {
-    if (selectedThread) {
-      setSelectedThread(null);
-    } else if (selectedGame) {
-      setSelectedGame(null);
-      setThreads([]);
-    }
+    setSelectedGame(null);
+    setThreads([]);
   };
 
   const filteredGames = sportFilter === 'all'
     ? games
     : games.filter(g => g.sport === sportFilter);
-
-  // Show comments view
-  if (selectedThread) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex flex-col">
-          <Comments thread={selectedThread} onBack={handleBack} />
-        </main>
-      </div>
-    );
-  }
 
   // Show thread list for selected game
   if (selectedGame) {
@@ -124,16 +101,10 @@ function HomePage() {
             )}
           </div>
 
-          {!isAuthenticated && (
-            <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-3 mb-4 text-sm">
-              <p className="text-blue-300">📖 Read-only mode • Sign in with Reddit to comment & vote</p>
-            </div>
-          )}
-
           <ThreadList
             threads={threads}
             selectedThreadId={null}
-            onSelectThread={setSelectedThread}
+            onSelectThread={() => {}}
             isLoading={isLoadingThreads}
           />
         </main>
@@ -164,7 +135,7 @@ function HomePage() {
         </div>
 
         {/* Loading state */}
-        {isLoadingGames || authLoading ? (
+        {isLoadingGames ? (
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
               <div key={i} className="bg-slate-800 rounded-xl p-4 animate-pulse">
