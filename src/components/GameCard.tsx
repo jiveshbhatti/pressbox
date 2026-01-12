@@ -60,7 +60,7 @@ export function GameCard({
   return (
     <button
       onClick={onClick}
-      className="w-full h-full rounded-[40px] p-0.5 relative group transition-all duration-700 hover:scale-[1.03] active:scale-[0.98]"
+      className="w-full h-full rounded-[28px] sm:rounded-[40px] p-0.5 relative group transition-all duration-700 hover:scale-[1.03] active:scale-[0.98]"
     >
       {/* Diffuse Atmospheric Halos - VERY prominent team colors */}
       <div
@@ -76,7 +76,7 @@ export function GameCard({
 
       {/* Main Glass Card container - more transparent */}
       <div
-        className="relative h-full w-full rounded-[38px] p-8 flex flex-col items-stretch overflow-hidden transition-colors duration-500 shadow-2xl shadow-slate-400/40 dark:shadow-black/40"
+        className="relative h-full w-full rounded-[28px] sm:rounded-[38px] p-4 sm:p-8 flex flex-col items-stretch overflow-hidden transition-colors duration-500 shadow-2xl shadow-slate-400/40 dark:shadow-black/40"
         style={{
           background: `linear-gradient(135deg, ${awayColor}70 0%, rgba(255,255,255,0.25) 25%, rgba(255,255,255,0.25) 75%, ${homeColor}70 100%)`,
           backdropFilter: 'blur(16px)',
@@ -85,25 +85,25 @@ export function GameCard({
         }}
       >
         {/* Side Tints - Strong team color washes */}
-        <div className="absolute inset-0 flex pointer-events-none rounded-[38px] overflow-hidden">
+        <div className="absolute inset-0 flex pointer-events-none rounded-[28px] sm:rounded-[38px] overflow-hidden">
           <div className="w-1/2 h-full opacity-40" style={{ background: `linear-gradient(to right, ${awayColor}, transparent 60%)` }} />
           <div className="w-1/2 h-full opacity-40" style={{ background: `linear-gradient(to left, ${homeColor}, transparent 60%)` }} />
         </div>
 
         {/* Subtle Shine/Inner Glow - reduced */}
-        <div className="absolute inset-0 rounded-[38px] bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 rounded-[28px] sm:rounded-[38px] bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
 
         {/* Top Label (Sport) */}
-        <div className="flex justify-center mb-6 relative z-10">
-          <span className="text-[9px] font-black tracking-[0.3em] uppercase px-4 py-1 rounded-full bg-slate-900/5 text-slate-500 border border-slate-900/10">
+        <div className="flex justify-center mb-3 sm:mb-6 relative z-10">
+          <span className="text-[8px] sm:text-[9px] font-black tracking-[0.2em] sm:tracking-[0.3em] uppercase px-3 sm:px-4 py-0.5 sm:py-1 rounded-full bg-slate-900/5 text-slate-500 border border-slate-900/10">
             {game.sport}
           </span>
         </div>
 
         {/* Main Scoreboard Row: Team - Score - Team */}
-        <div className="flex items-center justify-between gap-2 mb-4 relative z-10">
+        <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4 relative z-10">
           {/* Away Team */}
-          <div className="flex flex-col items-center gap-3 w-[100px]">
+          <div className="flex flex-col items-center gap-2 sm:gap-3 w-[70px] sm:w-[100px]">
             <div className="relative group/logo">
               <div
                 className="absolute inset-x-0 inset-y-0 rounded-full blur-2xl opacity-0 group-hover/logo:opacity-50 transition-opacity"
@@ -116,8 +116,8 @@ export function GameCard({
                   style={{ '--possession-color': awayColor.startsWith('#') ? hexToRgb(awayColor) : '100, 116, 139' } as any}
                 />
               )}
-              <div className="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl border border-white shadow-md transition-transform group-hover:scale-110 duration-500 z-10">
-                <TeamLogo src={game.awayTeam.logo} alt={game.awayTeam.abbreviation} size={50} />
+              <div className="relative bg-white/80 backdrop-blur-md p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border border-white shadow-md transition-transform group-hover:scale-110 duration-500 z-10">
+                <TeamLogo src={game.awayTeam.logo} alt={game.awayTeam.abbreviation} size={36} />
 
                 {/* Favorite Toggle */}
                 <button
@@ -135,10 +135,10 @@ export function GameCard({
               </div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-black text-slate-900 uppercase tracking-tight leading-tight">
+              <div className="text-[10px] sm:text-sm font-black text-slate-900 uppercase tracking-tight leading-tight">
                 {game.awayTeam.name}
               </div>
-              <div className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-widest italic">
+              <div className="text-[8px] sm:text-[10px] text-slate-500 font-bold mt-0.5 sm:mt-1 uppercase tracking-widest italic">
                 {game.awayTeam.abbreviation}
               </div>
             </div>
@@ -147,12 +147,12 @@ export function GameCard({
           {/* Centered Score & Status */}
           <div className="flex flex-col items-center flex-1">
             {(isLive || isFinal) ? (
-              <div className="flex items-center gap-6">
-                <span className={`text-6xl font-black tabular-nums tracking-tighter text-slate-900`}>
+              <div className="flex items-center gap-3 sm:gap-6">
+                <span className={`text-4xl sm:text-6xl font-black tabular-nums tracking-tighter text-slate-900`}>
                   {game.awayScore ?? '-'}
                 </span>
-                <span className="text-2xl font-black text-slate-300">—</span>
-                <span className={`text-6xl font-black tabular-nums tracking-tighter text-slate-900`}>
+                <span className="text-xl sm:text-2xl font-black text-slate-300">—</span>
+                <span className={`text-4xl sm:text-6xl font-black tabular-nums tracking-tighter text-slate-900`}>
                   {game.homeScore ?? '-'}
                 </span>
               </div>
@@ -182,7 +182,7 @@ export function GameCard({
           </div>
 
           {/* Home Team */}
-          <div className="flex flex-col items-center gap-3 w-[100px]">
+          <div className="flex flex-col items-center gap-2 sm:gap-3 w-[70px] sm:w-[100px]">
             <div className="relative group/logo">
               <div
                 className="absolute inset-x-0 inset-y-0 rounded-full blur-2xl opacity-0 group-hover/logo:opacity-50 transition-opacity"
@@ -196,10 +196,10 @@ export function GameCard({
                 />
               )}
               <div
-                className="relative bg-white/80 backdrop-blur-md p-2 rounded-2xl border shadow-md transition-transform group-hover:scale-110 duration-500 z-10"
+                className="relative bg-white/80 backdrop-blur-md p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border shadow-md transition-transform group-hover:scale-110 duration-500 z-10"
                 style={{ borderColor: `${homeColor}60` }}
               >
-                <TeamLogo src={game.homeTeam.logo} alt={game.homeTeam.abbreviation} size={50} />
+                <TeamLogo src={game.homeTeam.logo} alt={game.homeTeam.abbreviation} size={36} />
 
                 {/* Favorite Toggle */}
                 <button
@@ -217,10 +217,10 @@ export function GameCard({
               </div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-black text-slate-900 uppercase tracking-tight leading-tight">
+              <div className="text-[10px] sm:text-sm font-black text-slate-900 uppercase tracking-tight leading-tight">
                 {game.homeTeam.name}
               </div>
-              <div className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-widest italic">
+              <div className="text-[8px] sm:text-[10px] text-slate-500 font-bold mt-0.5 sm:mt-1 uppercase tracking-widest italic">
                 {game.homeTeam.abbreviation}
               </div>
             </div>
@@ -228,13 +228,13 @@ export function GameCard({
         </div>
 
         {/* Bottom Details (Odds / Venue) */}
-        <div className="mt-6 flex justify-center gap-6 relative z-10">
+        <div className="mt-3 sm:mt-6 flex justify-center gap-3 sm:gap-6 relative z-10">
           {game.situation?.odds?.spread && (
-            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-r border-slate-200 pr-6">
+            <span className="text-[8px] sm:text-[10px] font-black text-slate-900 uppercase tracking-wider sm:tracking-widest border-r border-slate-200 pr-3 sm:pr-6">
               {game.situation.odds.spread}
             </span>
           )}
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-wider sm:tracking-widest truncate max-w-[100px] sm:max-w-none">
             {game.venue || 'TBD'}
           </span>
         </div>
