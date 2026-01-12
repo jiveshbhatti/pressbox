@@ -578,17 +578,17 @@ function HomePage() {
           </div>
 
           {/* Thread Controls */}
-          <div className="mb-4 space-y-3">
+          <div className="mb-8 space-y-6">
             {/* Filter & Refresh Row */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 p-1 glass rounded-2xl">
                 {(['all', 'live', 'post-game'] as const).map(filter => (
                   <button
                     key={filter}
                     onClick={() => setThreadFilter(filter)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all ${threadFilter === filter
-                      ? 'bg-slate-800 dark:bg-white text-white dark:text-slate-900'
-                      : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500'
+                    className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${threadFilter === filter
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md scale-[1.02]'
+                      : 'text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/10'
                       }`}
                   >
                     {filter === 'all' ? 'All' : filter === 'live' ? 'Live' : 'Post Game'}
@@ -598,30 +598,34 @@ function HomePage() {
               <button
                 onClick={handleRefreshThreads}
                 disabled={isRefreshingThreads}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wide hover:border-slate-400 dark:hover:border-slate-500 disabled:opacity-50 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl glass-pill group/refresh disabled:opacity-50"
               >
-                <svg className={`w-4 h-4 ${isRefreshingThreads ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
+                <div className={`w-6 h-6 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center transition-transform duration-500 group-hover/refresh:rotate-180`}>
+                  <svg className={`w-3.5 h-3.5 text-white dark:text-slate-900 ${isRefreshingThreads ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </div>
+                <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Refresh</span>
               </button>
             </div>
 
             {/* Sort Row */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sort:</span>
-              {(['favorites-first', 'active', 'newest', 'main-first'] as const).map(sort => (
-                <button
-                  key={sort}
-                  onClick={() => setThreadSort(sort)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all ${threadSort === sort
-                    ? 'bg-slate-700 dark:bg-slate-200 text-white dark:text-slate-900'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
-                >
-                  {sort === 'favorites-first' ? '★ Favs' : sort === 'active' ? 'Active' : sort === 'newest' ? 'New' : 'Main'}
-                </button>
-              ))}
+            <div className="flex items-center gap-4 px-2">
+              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] shrink-0">Sort By</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {(['favorites-first', 'active', 'newest', 'main-first'] as const).map(sort => (
+                  <button
+                    key={sort}
+                    onClick={() => setThreadSort(sort)}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 glass-pill ${threadSort === sort
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-none shadow-sm'
+                      : 'text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/10'
+                      }`}
+                  >
+                    {sort === 'favorites-first' ? '★ Favs' : sort === 'active' ? 'Active' : sort === 'newest' ? 'New' : 'Main'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
