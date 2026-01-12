@@ -87,26 +87,24 @@ function isGameThread(post: ArcticPost): boolean {
   );
 }
 
-// Check if post matches the game
+// Check if post matches the game - must mention BOTH teams
 function matchesGame(post: ArcticPost, game: Game): boolean {
   const text = (post.title + ' ' + (post.selftext || '')).toLowerCase();
 
-  const homeTerms = [
-    game.homeTeam.abbreviation.toLowerCase(),
-    game.homeTeam.name.toLowerCase(),
-    ...game.homeTeam.name.split(' ').map(w => w.toLowerCase()),
-  ];
+  // Get the last word of team name (usually the actual team name like "Patriots", "Chargers")
+  const homeWords = game.homeTeam.name.split(' ');
+  const awayWords = game.awayTeam.name.split(' ');
+  const homeTeamName = homeWords[homeWords.length - 1].toLowerCase();
+  const awayTeamName = awayWords[awayWords.length - 1].toLowerCase();
 
-  const awayTerms = [
-    game.awayTeam.abbreviation.toLowerCase(),
-    game.awayTeam.name.toLowerCase(),
-    ...game.awayTeam.name.split(' ').map(w => w.toLowerCase()),
-  ];
+  // Check for team name or abbreviation
+  const hasHome = text.includes(homeTeamName) ||
+                  text.includes(game.homeTeam.abbreviation.toLowerCase());
+  const hasAway = text.includes(awayTeamName) ||
+                  text.includes(game.awayTeam.abbreviation.toLowerCase());
 
-  const hasHome = homeTerms.some(term => text.includes(term));
-  const hasAway = awayTerms.some(term => text.includes(term));
-
-  return hasHome || hasAway;
+  // Must have BOTH teams mentioned to be a match for this specific game
+  return hasHome && hasAway;
 }
 
 // Find game threads for a specific game using Arctic Shift
