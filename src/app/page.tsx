@@ -10,6 +10,8 @@ import { Game, GameThread, Sport } from '@/types';
 import { getAllGames, getGameDetails } from '@/lib/sports';
 import { findGameThreadsPublic } from '@/lib/reddit-public';
 import { FieldMap } from '@/components/FieldMap';
+import { PullToRefresh } from '@/components/PullToRefresh';
+import { WinProbability } from '@/components/WinProbability';
 import { NFL_TEAM_SUBREDDITS, NBA_TEAM_SUBREDDITS } from '@/lib/constants';
 
 // Thread filter and sort types
@@ -36,6 +38,21 @@ function TeamLogo({ src, alt, size = 48 }: { src?: string; alt: string; size?: n
   }
   return (
     <Image src={src} alt={alt} width={size} height={size} className="object-contain" unoptimized />
+  );
+}
+
+function TimeoutIndicator({ counts, color, side }: { counts?: number; color: string; side: 'left' | 'right' }) {
+  const dots = [1, 2, 3];
+  return (
+    <div className={`flex gap-1 ${side === 'right' ? 'flex-row-reverse' : ''}`}>
+      {dots.map(i => (
+        <div
+          key={i}
+          className={`h-1 w-4 rounded-full transition-all duration-500 ${i <= (counts ?? 0) ? 'shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'opacity-20'}`}
+          style={{ backgroundColor: color }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -379,10 +396,18 @@ function HomePage() {
               <div className="flex items-center justify-between gap-8 mb-8">
                 {/* Away Team */}
                 <div className="flex-1 flex flex-col items-center text-center">
-                  <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-4 rounded-[28px] border border-white dark:border-slate-700 shadow-md mb-4">
+                  <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-4 rounded-[28px] border border-white dark:border-slate-700 shadow-md mb-4 relative">
                     <TeamLogo src={selectedGame.awayTeam.logo} alt={selectedGame.awayTeam.abbreviation} size={64} />
+                    {selectedGame.situation?.possession === selectedGame.awayTeam.id && (
+                      <div className="absolute -right-2 -top-2 bg-white dark:bg-slate-800 rounded-full p-1.5 shadow-lg border border-slate-100 dark:border-slate-700 animate-bounce z-20">
+                        <span className="text-xs">🏈</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="font-black text-slate-900 dark:text-white text-lg uppercase tracking-tight leading-tight">{selectedGame.awayTeam.name}</div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="font-black text-slate-900 dark:text-white text-lg uppercase tracking-tight leading-tight">{selectedGame.awayTeam.name}</div>
+                    <TimeoutIndicator counts={selectedGame.situation?.awayTimeouts} color={awayColor} side="left" />
+                  </div>
                   <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1 italic">{selectedGame.awayTeam.abbreviation}</div>
                   {selectedGame.awayTeam.record && (
                     <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-2 px-3 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/50">{selectedGame.awayTeam.record}</div>
@@ -418,10 +443,18 @@ function HomePage() {
 
                 {/* Home Team */}
                 <div className="flex-1 flex flex-col items-center text-center">
-                  <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-4 rounded-[28px] border border-white dark:border-slate-700 shadow-md mb-4">
+                  <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-4 rounded-[28px] border border-white dark:border-slate-700 shadow-md mb-4 relative">
                     <TeamLogo src={selectedGame.homeTeam.logo} alt={selectedGame.homeTeam.abbreviation} size={64} />
+                    {selectedGame.situation?.possession === selectedGame.homeTeam.id && (
+                      <div className="absolute -left-2 -top-2 bg-white dark:bg-slate-800 rounded-full p-1.5 shadow-lg border border-slate-100 dark:border-slate-700 animate-bounce z-20">
+                        <span className="text-xs">🏈</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="font-black text-slate-900 dark:text-white text-lg uppercase tracking-tight leading-tight">{selectedGame.homeTeam.name}</div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="font-black text-slate-900 dark:text-white text-lg uppercase tracking-tight leading-tight">{selectedGame.homeTeam.name}</div>
+                    <TimeoutIndicator counts={selectedGame.situation?.homeTimeouts} color={homeColor} side="right" />
+                  </div>
                   <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1 italic">{selectedGame.homeTeam.abbreviation}</div>
                   {selectedGame.homeTeam.record && (
                     <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-2 px-3 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/50">{selectedGame.homeTeam.record}</div>
@@ -477,6 +510,29 @@ function HomePage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Live Win Probability & Drive Summary */}
+              {isLive && (
+                <div className="mt-8 pt-8 border-t border-slate-900/5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <WinProbability
+                      homeProb={selectedGame.situation?.probability?.home}
+                      awayProb={selectedGame.situation?.probability?.away}
+                      homeColor={homeColor}
+                      awayColor={awayColor}
+                      homeAbbr={selectedGame.homeTeam.abbreviation}
+                      awayAbbr={selectedGame.awayTeam.abbreviation}
+                    />
+
+                    {selectedGame.situation?.drive && (
+                      <div className="px-6 py-4 rounded-[24px] bg-slate-50/50 dark:bg-white/5 border border-slate-900/5 dark:border-white/10">
+                        <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2">Current Drive</div>
+                        <div className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{selectedGame.situation.drive}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -569,12 +625,14 @@ function HomePage() {
             </div>
           </div>
 
-          <ThreadList
-            threads={filteredAndSortedThreads}
-            selectedThreadId={null}
-            onSelectThread={() => { }}
-            isLoading={isLoadingThreads}
-          />
+          <PullToRefresh onRefresh={handleRefreshThreads} isRefreshing={isRefreshingThreads}>
+            <ThreadList
+              threads={filteredAndSortedThreads}
+              selectedThreadId={null}
+              onSelectThread={() => { }}
+              isLoading={isLoadingThreads}
+            />
+          </PullToRefresh>
         </main>
       </div>
     );

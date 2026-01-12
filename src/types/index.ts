@@ -92,6 +92,7 @@ export interface GameSituation {
     home?: number;
     away?: number;
   };
+  drive?: string; // e.g., "7 plays, 54 yards, 3:12"
 }
 
 export interface Game {

@@ -32,6 +32,14 @@ interface ESPNSituation {
   awayTimeouts?: number;
   lastPlay?: {
     text?: string;
+    probability?: {
+      homeWinPercentage: number;
+      awayWinPercentage: number;
+    };
+    drive?: {
+      description: string;
+      timeElapsed: { displayValue: string };
+    };
   };
 }
 
@@ -94,6 +102,11 @@ function parseESPNGame(event: ESPNEvent, sport: Sport): Game {
       down: sit.down,
       homeTimeouts: sit.homeTimeouts,
       awayTimeouts: sit.awayTimeouts,
+      probability: sit.lastPlay?.probability ? {
+        home: sit.lastPlay.probability.homeWinPercentage,
+        away: sit.lastPlay.probability.awayWinPercentage,
+      } : undefined,
+      drive: sit.lastPlay?.drive?.description,
     };
   }
 
