@@ -128,16 +128,33 @@ function HomePage() {
     localStorage.setItem('pressbox_threadSort', value);
   }, []);
 
+  // Default favorite teams (shown first if user hasn't set their own)
+  const DEFAULT_FAVORITES = ['LAL'];
+
   // Load all preferences from localStorage on mount
   useEffect(() => {
-    // Load favorites
+    // Load favorites - use defaults if none saved
     const savedFavorites = localStorage.getItem('pressbox_favorites');
     if (savedFavorites) {
       try {
-        setFavorites(JSON.parse(savedFavorites));
+        const parsed = JSON.parse(savedFavorites);
+        // Only use saved favorites if they're a valid non-empty array
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFavorites(parsed);
+        } else {
+          // Use defaults and save them
+          setFavorites(DEFAULT_FAVORITES);
+          localStorage.setItem('pressbox_favorites', JSON.stringify(DEFAULT_FAVORITES));
+        }
       } catch (e) {
         console.error('Error parsing favorites:', e);
+        setFavorites(DEFAULT_FAVORITES);
+        localStorage.setItem('pressbox_favorites', JSON.stringify(DEFAULT_FAVORITES));
       }
+    } else {
+      // No saved favorites - use defaults
+      setFavorites(DEFAULT_FAVORITES);
+      localStorage.setItem('pressbox_favorites', JSON.stringify(DEFAULT_FAVORITES));
     }
 
     // Load sport filter

@@ -29,6 +29,40 @@ export function formatTime(dateString: string): string {
   });
 }
 
+export function formatGameTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+
+  // Check if game is today
+  const isToday = date.toDateString() === now.toDateString();
+
+  // Check if game is tomorrow
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = date.toDateString() === tomorrow.toDateString();
+
+  // Format time in user's local timezone
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  if (isToday) {
+    return timeStr;
+  } else if (isTomorrow) {
+    return `Tomorrow ${timeStr}`;
+  } else {
+    // Show date for games further out
+    const dateStr = date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+    return `${dateStr} ${timeStr}`;
+  }
+}
+
 export function formatRelativeTime(timestamp: number): string {
   const now = Date.now();
   const diffMs = now - timestamp * 1000;

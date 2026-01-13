@@ -1,7 +1,7 @@
 'use client';
 
 import { Game } from '@/types';
-import { formatDistanceToNow } from '@/lib/utils';
+import { formatGameTime } from '@/lib/utils';
 import Image from 'next/image';
 
 function hexToRgb(hex: string) {
@@ -174,8 +174,8 @@ export function GameCard({
               ) : isFinal ? (
                 <span className="text-[10px] font-black text-slate-400 tracking-[0.4em] uppercase">Final</span>
               ) : (
-                <span className="text-[10px] text-extrabold text-slate-500 uppercase tracking-widest">
-                  {formatDistanceToNow(game.startTime)}
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  {formatGameTime(game.startTime)}
                 </span>
               )}
             </div>
