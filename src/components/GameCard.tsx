@@ -158,7 +158,9 @@ export function GameCard({
               </div>
             ) : (
               <div className="text-center py-4">
-                <div className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Kickoff</div>
+                <div className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-tight">
+                  {formatGameTime(game.startTime)}
+                </div>
               </div>
             )}
 
@@ -175,7 +177,7 @@ export function GameCard({
                 <span className="text-[10px] font-black text-slate-400 tracking-[0.4em] uppercase">Final</span>
               ) : (
                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                  {formatGameTime(game.startTime)}
+                  {game.sport.toUpperCase()}
                 </span>
               )}
             </div>
