@@ -25,6 +25,38 @@ function getTeamSubreddit(abbr: string, sport: Sport): string | undefined {
   return undefined;
 }
 
+function hasGameChanged(prev: Game, next: Game): boolean {
+  return (
+    prev.homeScore !== next.homeScore ||
+    prev.awayScore !== next.awayScore ||
+    prev.status !== next.status ||
+    prev.clock !== next.clock ||
+    prev.period !== next.period ||
+    prev.statusDetail !== next.statusDetail ||
+    prev.situation?.yardLine !== next.situation?.yardLine ||
+    prev.situation?.possession !== next.situation?.possession ||
+    prev.situation?.downDistanceText !== next.situation?.downDistanceText ||
+    prev.situation?.isRedZone !== next.situation?.isRedZone
+  );
+}
+
+function mergeGameUpdate(prev: Game, next: Game): Game {
+  return {
+    ...prev,
+    ...next,
+    situation: next.situation ?? prev.situation,
+    leaders: next.leaders?.length ? next.leaders : prev.leaders,
+  };
+}
+
+function mergeGameDetails(prev: Game, details: Game): Game {
+  return {
+    ...details,
+    situation: details.situation ?? prev.situation,
+    leaders: details.leaders?.length ? details.leaders : prev.leaders,
+  };
+}
+
 function TeamLogo({ src, alt, size = 48 }: { src?: string; alt: string; size?: number }) {
   if (!src) {
     return (
@@ -84,7 +116,7 @@ function HomePage() {
   const setSportFilter = useCallback((value: Sport | 'all') => {
     setSportFilterState(value);
     localStorage.setItem('pressbox_sportFilter', value);
-  }, []);
+  }, [selectedGame]);
 
   const setThreadFilter = useCallback((value: ThreadFilter) => {
     setThreadFilterState(value);
@@ -182,24 +214,19 @@ function HomePage() {
     try {
       const allGames = await getAllGames();
       setGames(allGames);
-      // Also update selected game with fresh data
-      if (selectedGame) {
-        const details = await getGameDetails(selectedGame.id, selectedGame.sport);
-        if (details) setSelectedGame(details);
-      }
     } catch (error) {
       console.error('Error fetching games:', error);
     } finally {
       setIsLoadingGames(false);
     }
-  }, [selectedGame]);
+  }, []);
 
   // Update selected game when games refresh
   useEffect(() => {
     if (selectedGame && games.length > 0) {
       const updated = games.find(g => g.id === selectedGame.id);
-      if (updated && (updated.homeScore !== selectedGame.homeScore || updated.awayScore !== selectedGame.awayScore)) {
-        setSelectedGame(updated);
+      if (updated && hasGameChanged(selectedGame, updated)) {
+        setSelectedGame(prev => (prev ? mergeGameUpdate(prev, updated) : updated));
       }
     }
   }, [games, selectedGame]);
@@ -231,7 +258,9 @@ function HomePage() {
     try {
       // Fetch full details (leaders, stats) immediately
       const details = await getGameDetails(game.id, game.sport);
-      if (details) setSelectedGame(details);
+      if (details) {
+        setSelectedGame(prev => (prev ? mergeGameDetails(prev, details) : details));
+      }
 
       // Use Pullpush to find game threads
       const gameThreads = await findGameThreadsPublic(game);
@@ -256,14 +285,17 @@ function HomePage() {
     if (!selectedGame || isRefreshingThreads) return;
     setIsRefreshingThreads(true);
     try {
-      const gameThreads = await findGameThreadsPublic(selectedGame);
+      const [, gameThreads] = await Promise.all([
+        fetchGames(),
+        findGameThreadsPublic(selectedGame, { forceRefresh: true }),
+      ]);
       setThreads(gameThreads);
     } catch (error) {
       console.error('Error refreshing threads:', error);
     } finally {
       setIsRefreshingThreads(false);
     }
-  }, [selectedGame, isRefreshingThreads]);
+  }, [selectedGame, isRefreshingThreads, fetchGames]);
 
   // Get favorite team subreddits for sorting
   const favoriteSubreddits = useMemo(() => {

@@ -142,11 +142,16 @@ function isSimilarTitle(title1: string, title2: string): boolean {
 }
 
 // Find game threads for a specific game using Arctic Shift
-export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
-  // Check cache first
+export async function findGameThreadsPublic(
+  game: Game,
+  options: { forceRefresh?: boolean } = {}
+): Promise<GameThread[]> {
+  const { forceRefresh = false } = options;
+
+  // Check cache first (unless forcing refresh)
   const cacheKey = game.id;
   const cached = threadCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+  if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.threads;
   }
 
@@ -206,10 +211,14 @@ export async function findGameThreadsPublic(game: Game): Promise<GameThread[]> {
     return b.post.num_comments - a.post.num_comments;
   });
 
-  // Deduplicate similar titles ONLY within the same subreddit
-  // We want to keep threads from different subreddits even if titles are similar
+  // Deduplicate similar titles ONLY within the same subreddit.
+  // r/nfl can have multiple distinct coverage threads (e.g. ManningCast), keep all.
   const deduped: GameThread[] = [];
   for (const thread of sortedThreads) {
+    if (thread.subreddit === 'nfl') {
+      deduped.push(thread);
+      continue;
+    }
     const isDupe = deduped.some(existing =>
       existing.subreddit === thread.subreddit && // Only dedupe within same subreddit
       isSimilarTitle(existing.post.title, thread.post.title)

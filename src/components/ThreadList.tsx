@@ -61,6 +61,14 @@ export function ThreadList({ threads, isLoading }: ThreadListProps) {
     );
   }
 
+  const nflThreads = threads.filter(thread => thread.subreddit.toLowerCase() === 'nfl');
+  const hasMultipleNflThreads = nflThreads.length > 1;
+  const primaryNflThreadId = nflThreads.length > 0
+    ? nflThreads.reduce((top, thread) => (
+      thread.post.num_comments > top.post.num_comments ? thread : top
+    )).post.id
+    : null;
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -81,6 +89,9 @@ export function ThreadList({ threads, isLoading }: ThreadListProps) {
         {threads.map(thread => {
           const isHot = thread.post.num_comments > 1000;
           const threadType = getThreadType(thread.post.title);
+          const isNfl = thread.subreddit.toLowerCase() === 'nfl';
+          const showCoverageLabel = hasMultipleNflThreads && isNfl;
+          const isPrimaryCoverage = showCoverageLabel && thread.post.id === primaryNflThreadId;
 
           return (
             <a
@@ -118,6 +129,20 @@ export function ThreadList({ threads, isLoading }: ThreadListProps) {
                         r/{thread.subreddit}
                       </span>
                     </div>
+
+                    {showCoverageLabel && (
+                      <div className={`glass-pill px-3 py-1 ${isPrimaryCoverage
+                          ? 'bg-emerald-50/80 dark:bg-emerald-900/30'
+                          : 'bg-amber-50/80 dark:bg-amber-900/30'
+                        }`}>
+                        <span className={`text-[9px] font-black uppercase tracking-wider ${isPrimaryCoverage
+                            ? 'text-emerald-600 dark:text-emerald-300'
+                            : 'text-amber-600 dark:text-amber-300'
+                          }`}>
+                          {isPrimaryCoverage ? 'Main Game' : 'Alt Coverage'}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Hot Indicator */}
